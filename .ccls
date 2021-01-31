@@ -1,0 +1,5 @@
+clang
+-xc
+-std=c17
+-isystem$HOME/source/vcpkg/installed/x64-linux/include
+-L/home$HOME/source/vcpkg/installed/x64-linux/debug/lib
