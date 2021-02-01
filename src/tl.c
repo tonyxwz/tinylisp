@@ -8,6 +8,7 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include "tl.h"
+#include "lisp_func.h"
 
 lval*
 lval_num(double x)
@@ -15,6 +16,7 @@ lval_num(double x)
   lval* v = (lval*)malloc(sizeof(lval));
   v->type = LVAL_NUM;
   v->num = x;
+  v->count = 0;
   return v;
 }
 
@@ -25,6 +27,7 @@ lval_err(char* perr)
   v->type = LVAL_ERR;
   v->err = malloc(strlen(perr) + 1);
   strcpy(v->err, perr);
+  v->count = 0;
   return v;
 }
 
@@ -35,6 +38,7 @@ lval_sym(char* psym)
   v->type = LVAL_SYM;
   v->sym = malloc(strlen(psym) + 1);
   strcpy(v->sym, psym);
+  v->count = 0;
   return v;
 }
 
@@ -70,6 +74,30 @@ lval_del(lval* v)
   free(v);
 }
 
+// pop and delete original
+lval*
+lval_take(lval* sexpr, int i)
+{
+  // TODO no need to shift if cells are disgarded very soon
+  lval* pop = lval_pop(sexpr, i);
+  lval_del(sexpr);
+  return pop;
+}
+
+lval*
+lval_pop(lval* sexpr, int i)
+{ // TODO should throw exception if i >= count
+  lval* pop = sexpr->cell[i];
+  memmove(&sexpr->cell[i],     // popped item: sexpr->cell+i
+          &sexpr->cell[i + 1], // next item: sexpr->cell+i+1
+          sizeof(lval*) *
+            (sexpr->count - i - 1) // number of item left starting from i
+  );
+  sexpr->count--;
+  sexpr->cell = realloc(sexpr->cell, sizeof(lval*) * sexpr->count);
+  return pop;
+}
+
 lval*
 lval_read_num(const mpc_ast_t* ast)
 {
@@ -90,9 +118,8 @@ lval_read(const mpc_ast_t* ast)
     return lval_sym(ast->contents);
 
   lval* x = NULL;
-  if (strcmp(ast->tag, ">") == 0) // root node
-    x = lval_sexpr();
-  if (strstr(ast->tag, "sexpr")) // sexpr
+  if (strcmp(ast->tag, ">") == 0 || // root node (everything is expr first)
+      strstr(ast->tag, "sexpr"))    // sexpr
     x = lval_sexpr();
 
   for (int i = 0; i < ast->children_num; ++i) {
@@ -154,7 +181,7 @@ lval_println(lval* v)
   putchar('\n');
 }
 
-void
+int
 repl()
 {
   mpc_parser_t* Number = mpc_new("number");
@@ -165,7 +192,7 @@ repl()
 
   mpca_lang(MPCA_LANG_DEFAULT,
             " \
-    number   : /-?([0-9]*\\.)?[0-9]+/ ; \
+    number   : /(\\b|\\B)-?([0-9]*\\.)?[0-9]+(\\B|\\b)/ ; \
     symbol: '+' | '-' | '*' | '/' | '%' | '^' | \
         \"mod\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \"exp\" | \"log\" | \"pow\" | \
         \"min\" | \"max\" ; \
@@ -182,9 +209,8 @@ repl()
   puts("Tony's Lisp (tl) version 0.1-dev");
   puts("Press Ctrl+C to exit");
 
-  // repl
   while (1) {
-    char* input = readline("tl>>> ");
+    char* input = readline(">>> ");
     if (input == NULL) {
       free(input);
       break;
@@ -192,8 +218,8 @@ repl()
     add_history(input);
     mpc_result_t r;
     if (mpc_parse("<stdin>", input, TL, &r)) {
-      mpc_ast_print(r.output);
-      lval* tmp = lval_read(r.output);
+      // mpc_ast_print(r.output);
+      lval* tmp = eval(lval_read(r.output));
       lval_println(tmp);
       lval_del(tmp);
       mpc_ast_delete(r.output);
@@ -206,85 +232,84 @@ repl()
   }
 
   mpc_cleanup(5, Number, Symbol, Sexpr, Expr, TL);
-  /* return 0; */
+  return 0;
 }
 
-void
-print_ast(const mpc_ast_t* ast)
+lval*
+eval(lval* v)
 {
-  if (!ast->children_num)
-    return;
-  for (int i = 0; i < ast->children_num; ++i)
-    printf("%s ", ast->children[i]->contents);
-  printf("\n");
-}
-
-lval_t
-eval(const mpc_ast_t* ast)
-{
-  if (strstr(ast->tag, "number")) {
-    errno = 0;
-    double n = strtod(ast->contents, NULL);
-    return errno != 0 ? lval_err(BAD_NUM) : lval_num(n);
-  }
-  // expression
-  // children[0]: '(', children[-1]: ')'
-  const char* op = ast->children[1]->contents; // operator
-  lval_t x = eval(ast->children[2]); // first operand
-  if (ast->children_num == 4) {  // single operand operator
-
-  }
-
-  int i = 3;
-  while (strstr(ast->children[i]->tag, "expr")) {
-    printf("%s\n", ast->children[i]->contents);
-    x = eval_op(op, x, eval(ast->children[i]));
-    ++i;
-  }
-
-  if (strcmp(op, "-") == 0 && ast->children_num == 4)
-    return lval_num(-x.val);
+  if (v->type == LVAL_SEXPR)
+    return eval_sexpr(v);
   else
-    return x;
+    return v;
 }
 
-lval_t
-eval_op(const char* op, lval_t a, lval_t b)
+/* Think of func `eval` as a transformer, taking in one lval* transform it and
+ * return back.
+ * lval(sexpr) -> lval(num/err)
+ * since lval_read always read a expression as a sexpr
+ */
+lval*
+eval_sexpr(lval* v)
 {
-  if(a.type == ERR) return a;
-  if(b.type == ERR) return b;
-  if (strcmp(op, "+") == 0 || strcmp(op, "add") == 0)
-    return lval_num(a.val + b.val);
-  if (strcmp(op, "-") == 0 || strcmp(op, "sub") == 0)
-    return lval_num(a.val - b.val);
-  if (strcmp(op, "*") == 0 || strcmp(op, "mul") == 0)
-    return lval_num(a.val * b.val);
-  if (strcmp(op, "/") == 0 || strcmp(op, "div") == 0) {
-    if (b.val == 0)
-      return lval_err(DIV_ZERO);
-    else
-      return lval_num(a.val / b.val);
+  // evaluate all the childrens
+  for (int i = 0; i < v->count; ++i) {
+    v->cell[i] = eval(v->cell[i]);
   }
-  if (strcmp(op, "%") == 0 || strcmp(op, "mod") == 0) {
-    if (b.val == 0)
-      return lval_err(DIV_ZERO);
-    else
-      return lval_num(fmod(a.val, b.val));
+  // error handling
+  for (int i = 0; i < v->count; ++i) {
+    if (v->cell[i]->type == LVAL_ERR)
+      return lval_take(v, i);
   }
-  if (strcmp(op, "log") == 0) {
-    if (a.val > 0)
-      return lval_num(log(a.val));
-    else
-      return lval_err(BAD_LOG_BASE);
+  if (v->count == 0) // empty expression ()
+    return v;
+  if (v->count == 1) // empty expression (5)
+    return lval_take(v, 0);
+
+  // operator/symbol is the first cell of sexpr
+  lval* op = lval_pop(v, 0);
+  if (op->type != LVAL_SYM) {
+    lval_del(v);
+    lval_del(op);
+    return lval_err("sexpr must start with operator");
   }
-  if (strcmp(op, "exp") == 0)
-    return lval_num(exp(a.val));
-  if (strcmp(op, "^") == 0 || strcmp(op, "pow") == 0)
-    return lval_num(pow(a.val, b.val));
-  if (strcmp(op, "min") == 0)
-    return lval_num(a.val > b.val ? b.val : a.val);
-  if (strcmp(op, "max") == 0)
-    return lval_num(a.val > b.val ? a.val : b.val);
-  return lval_err(BAD_OP);
+  // v contains only nums
+  lval* result = buildin_op(v, op->sym); // sexpr -> num
+  lval_del(op);
+  return result;
 }
 
+lval*
+buildin_op(lval* v, const char* sym)
+{
+  for (int i = 0; i < v->count; ++i) {
+    if (v->cell[i]->type != LVAL_NUM) {
+      lval_del(v);
+      return lval_err("Cannot operate on non-number");
+    }
+  }
+  if (strcmp(sym, "sub") == 0 || strcmp(sym, "-") == 0) {
+    return lisp_sub(v);
+  } else if (strcmp(sym, "add") == 0 || strcmp(sym, "+") == 0) {
+    return lisp_add(v);
+  } else if (strcmp(sym, "div") == 0 || strcmp(sym, "/") == 0) {
+    return lisp_div(v);
+  } else if (strcmp(sym, "mul") == 0 || strcmp(sym, "*") == 0) {
+    return lisp_mul(v);
+  } else if (strcmp(sym, "mod") == 0 || strcmp(sym, "%") == 0) {
+    return lisp_mod(v);
+  } else if (strcmp(sym, "pow") == 0 || strcmp(sym, "^") == 0) {
+    return lisp_pow(v);
+  } else if (strcmp(sym, "exp") == 0) {
+    return lisp_exp(v);
+  } else if (strcmp(sym, "log") == 0) {
+    return lisp_log(v);
+  } else if (strcmp(sym, "min") == 0) {
+    return lisp_min(v);
+  } else if (strcmp(sym, "max") == 0) {
+    return lisp_max(v);
+  } else {
+    lval_del(v);
+    return lval_err("Unknown symbol");
+  }
+}
