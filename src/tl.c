@@ -9,33 +9,138 @@
 #include <readline/readline.h>
 #include "tl.h"
 
-lval_t
+lval*
 lval_num(double x)
 {
-  lval_t v;
-  v.type = OK;
-  v.val = x;
+  lval* v = (lval*)malloc(sizeof(lval));
+  v->type = LVAL_NUM;
+  v->num = x;
   return v;
 }
 
-lval_t
-lval_err(lval_error err)
+lval*
+lval_err(char* perr)
 {
-  lval_t v;
-  v.type = ERR;
-  v.err = err;
+  lval* v = (lval*)malloc(sizeof(lval));
+  v->type = LVAL_ERR;
+  v->err = malloc(strlen(perr) + 1);
+  strcpy(v->err, perr);
+  return v;
+}
+
+lval*
+lval_sym(char* psym)
+{
+  lval* v = (lval*)malloc(sizeof(lval));
+  v->type = LVAL_SYM;
+  v->sym = malloc(strlen(psym) + 1);
+  strcpy(v->sym, psym);
+  return v;
+}
+
+lval*
+lval_sexpr(void)
+{
+  lval* v = malloc(sizeof(lval));
+  v->type = LVAL_SEXPR;
+  v->count = 0;
+  v->cell = NULL;
   return v;
 }
 
 void
-lval_print(const lval_t* const v)
+lval_del(lval* v)
+{
+  // printf("deleted %d\n", v->type);
+  switch (v->type) {
+    case LVAL_NUM:
+      break;
+    case LVAL_ERR:
+      free(v->err);
+      break;
+    case LVAL_SYM:
+      free(v->sym);
+      break;
+    case LVAL_SEXPR:
+      for (int i = 0; i < v->count; ++i)
+        lval_del(v->cell[i]);
+      free(v->cell);
+      break;
+  }
+  free(v);
+}
+
+lval*
+lval_read_num(const mpc_ast_t* ast)
+{
+  errno = 0;
+  double x = strtod(ast->contents, NULL);
+  if (errno == 0)
+    return lval_num(x);
+  else
+    return lval_err("invalid number");
+}
+
+lval*
+lval_read(const mpc_ast_t* ast)
+{
+  if (strstr(ast->tag, "number"))
+    return lval_read_num(ast);
+  if (strstr(ast->tag, "symbol"))
+    return lval_sym(ast->contents);
+
+  lval* x = NULL;
+  if (strcmp(ast->tag, ">") == 0) // root node
+    x = lval_sexpr();
+  if (strstr(ast->tag, "sexpr")) // sexpr
+    x = lval_sexpr();
+
+  for (int i = 0; i < ast->children_num; ++i) {
+    if (strcmp(ast->children[i]->contents, "(") == 0 ||
+        strcmp(ast->children[i]->contents, ")") == 0 ||
+        strcmp(ast->children[i]->tag, "regex") == 0)
+      continue;
+    x = lval_add(x, lval_read(ast->children[i]));
+  }
+  return x;
+}
+
+lval*
+lval_add(lval* dest, lval* x)
+{
+  dest->count++;
+  dest->cell = realloc(dest->cell, sizeof(lval) * dest->count);
+  dest->cell[dest->count - 1] = x;
+  return dest;
+}
+
+void
+lval_print_expr(lval* v, char open, char close)
+{
+  putchar(open);
+  for (int i = 0; i < v->count; ++i) {
+    lval_print(v->cell[i]);
+    if (i != v->count - 1)
+      putchar(' ');
+  }
+  putchar(close);
+}
+
+void
+lval_print(lval* v)
 {
   switch (v->type) {
-    case OK:
-      printf("%f", v->val);
+    case LVAL_ERR:
+      printf("Error: %s", v->err);
       break;
-    case ERR:
-      printf("Error: %s", lval_what_error(v->err));
+    case LVAL_NUM:
+      printf("%f", v->num);
+      break;
+    case LVAL_SYM:
+      printf("%s", v->sym);
+      break;
+    case LVAL_SEXPR:
+      lval_print_expr(v, '(', ')');
       break;
     default:
       break;
@@ -43,50 +148,34 @@ lval_print(const lval_t* const v)
 }
 
 void
-lval_println(const lval_t* const v)
+lval_println(lval* v)
 {
   lval_print(v);
   putchar('\n');
-}
-
-const char*
-lval_what_error(lval_error e)
-{
-  switch (e) {
-    case DIV_ZERO:
-      return "DIV ZERO";
-      break;
-    case BAD_OP:
-      return "BAD OPERATOR";
-      break;
-    case BAD_NUM:
-      return "BAD NUMBER";
-      break;
-    default:
-      return "UNKNOWN ERROR";
-      break;
-  }
 }
 
 void
 repl()
 {
   mpc_parser_t* Number = mpc_new("number");
-  mpc_parser_t* Operator = mpc_new("operator");
+  mpc_parser_t* Symbol = mpc_new("symbol");
+  mpc_parser_t* Sexpr = mpc_new("sexpr");
   mpc_parser_t* Expr = mpc_new("expr");
   mpc_parser_t* TL = mpc_new("tl");
 
   mpca_lang(MPCA_LANG_DEFAULT,
             " \
     number   : /-?([0-9]*\\.)?[0-9]+/ ; \
-    operator : '+' | '-' | '*' | '/' | '%' | '^' | \
+    symbol: '+' | '-' | '*' | '/' | '%' | '^' | \
         \"mod\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \"exp\" | \"log\" | \"pow\" | \
         \"min\" | \"max\" ; \
-    expr     : <number> | '(' <operator> <expr>+ ')'; \
-    tl       : /^/ <operator> <expr>+ /$/; \
+    sexpr: '(' <expr>* ')' ;\
+    expr     : <number> | <symbol> | <sexpr> ; \
+    tl       : /^/ <expr>* /$/; \
   ",
             Number,
-            Operator,
+            Symbol,
+            Sexpr,
             Expr,
             TL);
 
@@ -104,8 +193,9 @@ repl()
     mpc_result_t r;
     if (mpc_parse("<stdin>", input, TL, &r)) {
       mpc_ast_print(r.output);
-      lval_t tmp = eval(r.output);
-      lval_println(&tmp);
+      lval* tmp = lval_read(r.output);
+      lval_println(tmp);
+      lval_del(tmp);
       mpc_ast_delete(r.output);
     } else {
       mpc_err_print(r.error);
@@ -115,7 +205,7 @@ repl()
     free(input);
   }
 
-  mpc_cleanup(4, Number, Operator, Expr, TL);
+  mpc_cleanup(5, Number, Symbol, Sexpr, Expr, TL);
   /* return 0; */
 }
 
