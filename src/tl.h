@@ -6,13 +6,16 @@ extern "C" {
 
 #include "mpc.h"
 
+#define LASSERT(args, cond, emsg) \
+  if (!(cond)) {lval_del(args); return lval_err(emsg);}
 
 typedef enum
 {
   LVAL_ERR,
   LVAL_NUM,
   LVAL_SYM,
-  LVAL_SEXPR
+  LVAL_SEXPR,
+  LVAL_QEXPR
 } lval_type;
 
 
@@ -32,6 +35,7 @@ lval* lval_num(double x);
 lval* lval_err(char* perr);
 lval* lval_sym(char* psym);
 lval* lval_sexpr(void);
+lval* lval_qexpr(void);
 void lval_del(lval* v);
 lval* lval_take(lval* sexpr, int i);
 lval* lval_pop(lval* sexpr, int i);
@@ -46,9 +50,11 @@ void lval_print(lval* v);
 // evaluate
 lval* eval_sexpr(lval* v);
 lval* eval(lval* v);
-lval* buildin_op(lval* v, const char* sym);
+lval* buildin(lval* v, const char* sym);
+lval* math_op(lval* v, const char* sym);
 
 int repl();
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

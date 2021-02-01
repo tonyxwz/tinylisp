@@ -1,14 +1,17 @@
 #include <errno.h>
 #include <stdio.h>
-#include <stdarg.h>
+// #include <stdarg.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+
 #include <readline/history.h>
 #include <readline/readline.h>
+
 #include "tl.h"
 #include "lisp_func.h"
+#include "qexpr.h"
 
 lval*
 lval_num(double x)
@@ -52,6 +55,16 @@ lval_sexpr(void)
   return v;
 }
 
+lval*
+lval_qexpr(void)
+{
+  lval* v = malloc(sizeof(lval));
+  v->type = LVAL_QEXPR;
+  v->cell = NULL;
+  v->count = 0;
+  return v;
+}
+
 void
 lval_del(lval* v)
 {
@@ -66,9 +79,12 @@ lval_del(lval* v)
       free(v->sym);
       break;
     case LVAL_SEXPR:
+    case LVAL_QEXPR:
       for (int i = 0; i < v->count; ++i)
         lval_del(v->cell[i]);
       free(v->cell);
+      break;
+    default:
       break;
   }
   free(v);
@@ -121,10 +137,15 @@ lval_read(const mpc_ast_t* ast)
   if (strcmp(ast->tag, ">") == 0 || // root node (everything is expr first)
       strstr(ast->tag, "sexpr"))    // sexpr
     x = lval_sexpr();
+  if (strstr(ast->tag, "qexpr"))
+    x = lval_qexpr();
+  
 
   for (int i = 0; i < ast->children_num; ++i) {
-    if (strcmp(ast->children[i]->contents, "(") == 0 ||
+    if (strcmp(ast->children[i]->contents, "(") == 0 ||  // sexpr branch
         strcmp(ast->children[i]->contents, ")") == 0 ||
+        strcmp(ast->children[i]->contents, "{") == 0 ||  // qexpr branch
+        strcmp(ast->children[i]->contents, "}") == 0 ||
         strcmp(ast->children[i]->tag, "regex") == 0)
       continue;
     x = lval_add(x, lval_read(ast->children[i]));
@@ -169,6 +190,9 @@ lval_print(lval* v)
     case LVAL_SEXPR:
       lval_print_expr(v, '(', ')');
       break;
+    case LVAL_QEXPR:
+      lval_print_expr(v, '{', '}');
+      break;
     default:
       break;
   }
@@ -187,6 +211,7 @@ repl()
   mpc_parser_t* Number = mpc_new("number");
   mpc_parser_t* Symbol = mpc_new("symbol");
   mpc_parser_t* Sexpr = mpc_new("sexpr");
+  mpc_parser_t* Qexpr = mpc_new("qexpr");
   mpc_parser_t* Expr = mpc_new("expr");
   mpc_parser_t* TL = mpc_new("tl");
 
@@ -194,15 +219,19 @@ repl()
             " \
     number   : /(\\b|\\B)-?([0-9]*\\.)?[0-9]+(\\B|\\b)/ ; \
     symbol: '+' | '-' | '*' | '/' | '%' | '^' | \
-        \"mod\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \"exp\" | \"log\" | \"pow\" | \
-        \"min\" | \"max\" ; \
+        \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \
+        \"exp\" | \"log\" | \"pow\" | \
+        \"min\" | \"max\" | \
+        \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\"; \
     sexpr: '(' <expr>* ')' ;\
-    expr     : <number> | <symbol> | <sexpr> ; \
+    qexpr: '{' <expr>* '}'; \
+    expr     : <number> | <symbol> | <sexpr> | <qexpr> ; \
     tl       : /^/ <expr>* /$/; \
   ",
             Number,
             Symbol,
             Sexpr,
+            Qexpr,
             Expr,
             TL);
 
@@ -218,7 +247,7 @@ repl()
     add_history(input);
     mpc_result_t r;
     if (mpc_parse("<stdin>", input, TL, &r)) {
-      // mpc_ast_print(r.output);
+      mpc_ast_print(r.output);
       lval* tmp = eval(lval_read(r.output));
       lval_println(tmp);
       lval_del(tmp);
@@ -231,7 +260,7 @@ repl()
     free(input);
   }
 
-  mpc_cleanup(5, Number, Symbol, Sexpr, Expr, TL);
+  mpc_cleanup(6, Number, Symbol, Sexpr, Qexpr, Expr, TL);
   return 0;
 }
 
@@ -274,13 +303,32 @@ eval_sexpr(lval* v)
     return lval_err("sexpr must start with operator");
   }
   // v contains only nums
-  lval* result = buildin_op(v, op->sym); // sexpr -> num
+  lval* result = buildin(v, op->sym); // sexpr -> num
   lval_del(op);
   return result;
 }
 
+lval* buildin(lval* v, const char* sym) {
+  if (strcmp(sym, "head") == 0) {
+    return qhead(v);
+  } else if (strcmp(sym, "tail") == 0) {
+    return qtail(v);
+  } else if (strcmp(sym, "list") == 0) {
+    return qlist(v);
+  } else if (strcmp(sym, "join") == 0) {
+    return qjoin(v);
+  } else if (strcmp(sym, "eval") == 0) {
+    return qeval(v);
+  } else if (strstr("+ - * / % ^ add sub mul div mod pow exp log min max", sym)) {
+    return math_op(v, sym);
+  } else {
+    lval_del(v);
+    return lval_err("Unknown symbol");
+  }
+}
+
 lval*
-buildin_op(lval* v, const char* sym)
+math_op(lval* v, const char* sym)
 {
   for (int i = 0; i < v->count; ++i) {
     if (v->cell[i]->type != LVAL_NUM) {
