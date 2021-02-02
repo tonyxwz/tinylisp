@@ -13,7 +13,6 @@
 #include "lobj.h"
 #include "tl.h"
 
-
 int
 repl()
 {
@@ -87,6 +86,7 @@ eval(lenv* env, lobj* v)
   if (v->type == LOBJ_SYM) {
     lobj* x = lenv_get(env, v);
     lobj_del(v);
+    // func with 0 args
     return x;
   } else if (v->type == LOBJ_SEXPR)
     return eval_sexpr(env, v);
@@ -114,7 +114,16 @@ eval_sexpr(lenv* env, lobj* v)
   if (v->count == 0) // empty expression ()
     return v;
   if (v->count == 1) // empty expression (5)
-    return lobj_take(v, 0);
+  {
+    lobj* x = lobj_take(v, 0);
+    if (x->type == LOBJ_FUNC) {
+      lobj* x2 = x->func(env, lobj_sexpr());
+      lobj_del(x);
+      return x2;
+    } else {
+      return x;
+    }
+  }
 
   // operator/symbol is the first cell of sexpr
   lobj* f = lobj_pop(v, 0);
@@ -132,48 +141,72 @@ eval_sexpr(lenv* env, lobj* v)
 void
 init_env(lenv* e)
 {
-  lenv_move(e,  lobj_sym("def"),   lobj_func(builtin_def));
+  lenv_take(e, lobj_sym("def"), lobj_func(builtin_def));
+  lenv_take(e, lobj_sym("dir"), lobj_func(builtin_dir));
+  lenv_take(e, lobj_sym("echo"), lobj_func(builtin_echo));
 
-  lenv_move(e,  lobj_sym("list"),  lobj_func(qlist));
-  lenv_move(e,  lobj_sym("head"),  lobj_func(qhead));
-  lenv_move(e,  lobj_sym("tail"),  lobj_func(qtail));
-  lenv_move(e,  lobj_sym("join"),  lobj_func(qjoin));
-  lenv_move(e,  lobj_sym("eval"),  lobj_func(qeval));
+  lenv_take(e, lobj_sym("list"), lobj_func(builtin_list));
+  lenv_take(e, lobj_sym("head"), lobj_func(builtin_head));
+  lenv_take(e, lobj_sym("tail"), lobj_func(builtin_tail));
+  lenv_take(e, lobj_sym("join"), lobj_func(builtin_join));
+  lenv_take(e, lobj_sym("eval"), lobj_func(builtin_eval));
 
-  lenv_move(e,  lobj_sym("add"),   lobj_func(lisp_add));
-  lenv_move(e,  lobj_sym("+"),     lobj_func(lisp_add));
-  lenv_move(e,  lobj_sym("sub"),   lobj_func(lisp_sub));
-  lenv_move(e,  lobj_sym("-"),     lobj_func(lisp_sub));
-  lenv_move(e,  lobj_sym("mul"),   lobj_func(lisp_mul));
-  lenv_move(e,  lobj_sym("*"),     lobj_func(lisp_mul));
-  lenv_move(e,  lobj_sym("div"),   lobj_func(lisp_div));
-  lenv_move(e,  lobj_sym("/"),     lobj_func(lisp_div));
-  lenv_move(e,  lobj_sym("min"),   lobj_func(lisp_min));
-  lenv_move(e,  lobj_sym("max"),   lobj_func(lisp_max));
-  lenv_move(e,  lobj_sym("mod"),   lobj_func(lisp_mod));
-  lenv_move(e,  lobj_sym("exp"),   lobj_func(lisp_exp));
-  lenv_move(e,  lobj_sym("log"),   lobj_func(lisp_log));
-  lenv_move(e,  lobj_sym("log"),   lobj_func(lisp_log));
-
+  lenv_take(e, lobj_sym("add"), lobj_func(builtin_add));
+  lenv_take(e, lobj_sym("+"), lobj_func(builtin_add));
+  lenv_take(e, lobj_sym("sub"), lobj_func(builtin_sub));
+  lenv_take(e, lobj_sym("-"), lobj_func(builtin_sub));
+  lenv_take(e, lobj_sym("mul"), lobj_func(builtin_mul));
+  lenv_take(e, lobj_sym("*"), lobj_func(builtin_mul));
+  lenv_take(e, lobj_sym("div"), lobj_func(builtin_div));
+  lenv_take(e, lobj_sym("/"), lobj_func(builtin_div));
+  lenv_take(e, lobj_sym("min"), lobj_func(builtin_min));
+  lenv_take(e, lobj_sym("max"), lobj_func(builtin_max));
+  lenv_take(e, lobj_sym("mod"), lobj_func(builtin_mod));
+  lenv_take(e, lobj_sym("exp"), lobj_func(builtin_exp));
+  lenv_take(e, lobj_sym("pow"), lobj_func(builtin_pow));
+  lenv_take(e, lobj_sym("log"), lobj_func(builtin_log));
 }
 
-lobj* builtin_def(lenv* env, lobj* a) {
-  LASSERT(a, a->cell[0]->type == LOBJ_QEXPR,
-    "symbol must be qexpr");
-  lobj * syms = a->cell[0];
-  for(int i = 1; i < syms->count; ++i) {
-    LASSERT(a, syms->cell[i]->type == LOBJ_SYM,
-      "function def can only bind to symbols");
+lobj*
+builtin_def(lenv* env, lobj* a)
+{
+  LASSERT(a, a->cell[0]->type == LOBJ_QEXPR, "symbol must be qexpr");
+  lobj* syms = a->cell[0];
+  for (int i = 1; i < syms->count; ++i) {
+    LASSERT(a,
+            syms->cell[i]->type == LOBJ_SYM,
+            "function def can only bind to symbols");
   }
-  LASSERT(a, syms->count==a->count-1,
-    "unmatching numbers of symbols as values");
-  for(int i = 0; i < syms->count; ++i) {
-    lenv_put(env, syms->cell[i], a->cell[i+1]);
+  LASSERT(
+    a, syms->count == a->count - 1, "unmatching numbers of symbols as values");
+  for (int i = 0; i < syms->count; ++i) {
+    lenv_put(env, syms->cell[i], a->cell[i + 1]);
   }
   lobj_del(a);
   return lobj_sexpr();
 }
 
+lobj*
+builtin_dir(lenv* env, lobj* a)
+{
+  // LASSERT(
+  //   a, a->count == 0, "<function dir> expecting 0 argument, got %d", a->count);
+
+  for (int i = 0; i < env->count; ++i) {
+    printf("%s:\t", env->syms[i]);
+    lobj_println(env->objs[i]);
+  }
+  lobj_del(a);
+  return lobj_sexpr();
+}
+
+lobj*
+builtin_echo(lenv* env, lobj* a)
+{
+  lobj_println(a);
+  lobj_del(a);
+  return lobj_sexpr();
+}
 
 int
 main(int argc, char** argv)

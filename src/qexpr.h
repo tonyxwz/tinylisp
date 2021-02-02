@@ -11,19 +11,19 @@ extern "C"
 #include "lobj.h"
 
   // {1 2 3} -> {1}
-  lobj* qhead(lenv* e, lobj* v);
+  lobj* builtin_head(lenv* e, lobj* v);
 
   // {1 2 3} -> {2 3}
-  lobj* qtail(lenv* e, lobj* v);
+  lobj* builtin_tail(lenv* e, lobj* v);
 
   // 1 2 3 -> {1 2 3}
-  lobj* qlist(lenv*e, lobj* v);
+  lobj* builtin_list(lenv*e, lobj* v);
 
   // {1}{2}{3} -> {1 2 3}
-  lobj* qjoin(lenv*e, lobj* v);
+  lobj* builtin_join(lenv*e, lobj* v);
 
   // qexpr -> num
-  lobj* qeval(lenv* e, lobj* v);
+  lobj* builtin_eval(lenv* e, lobj* v);
 
 #ifdef __cplusplus
 } // extern "C"

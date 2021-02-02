@@ -5,13 +5,23 @@ extern "C"
 {
 #endif
 
-#include "mpc.h"
+#include <errno.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdbool.h>
 
-#define LASSERT(args, cond, emsg)                                              \
+#include "mpc.h"
+// ASSERT_OR_CLEAN ...->##__VA_ARGS__
+#define LASSERT(args, cond, emsg, ...)                                         \
   if (!(cond)) {                                                               \
+    lobj* err = lobj_err(emsg, ##__VA_ARGS__);                                 \
     lobj_del(args);                                                            \
-    return lobj_err(emsg);                                                     \
+    return err;                                                                \
   }
+// TODO Define more functions
 
   typedef enum
   {
@@ -22,7 +32,6 @@ extern "C"
     LOBJ_QEXPR,
     LOBJ_FUNC
   } lobj_type;
-
 
   // lobj->lbuiltinFunc
   // lbuiltinFunc -> lobj, lenv
@@ -40,12 +49,12 @@ extern "C"
     lbuiltinFunc func; // func
     int count;
     struct lobj** cell; // list of other lobj's contained in sexpr
+    bool constant;
   };
 
   // ctor dtor
-  lobj*
-  lobj_num(double x);
-  lobj* lobj_err(char* perr);
+  lobj* lobj_num(double x);
+  lobj* lobj_err(char* fmt, ...);
   lobj* lobj_sym(char* psym);
   lobj* lobj_sexpr(void);
   lobj* lobj_qexpr(void);
@@ -63,7 +72,7 @@ extern "C"
   void lobj_print_expr(lobj* v, char open, char close);
   void lobj_print(lobj* v);
   void lobj_println(lobj* v);
-
+  char* lobj_typename(lobj_type t); // TODO
 
 #ifdef __cplusplus
 } // extern "C"

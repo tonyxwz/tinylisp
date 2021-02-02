@@ -20,6 +20,8 @@ extern "C"
   int repl();
   void init_env(lenv* e);
   lobj* builtin_def(lenv* env, lobj* a);
+  lobj* builtin_dir(lenv* env, lobj* a);
+  lobj* builtin_echo(lenv* env, lobj* a);
 
 #ifdef __cplusplus
 } // extern "C"

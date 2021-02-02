@@ -2,10 +2,44 @@
 #include "lobj.h"
 #include <math.h>
 
-
-// local func declarations
+lobj*
+check_args(lobj* v, const char* fname)
+{
+  for (int i = 0; i < v->count; ++i) {
+    LASSERT(
+      v,
+      v->cell[i]->type == LOBJ_NUM,
+      "<function %s> got wrong type for argument %d, expecting %s, got %s",
+      fname,
+      i + 1,
+      lobj_typename(LOBJ_NUM),
+      lobj_typename(v->cell[i]->type));
+  }
+  return NULL; // OK
+}
 
 // recursive
+lobj*
+recursive_op_(lenv* e, lobj* v, double (*op)(double, double), const char* fname)
+{
+  lobj* err = check_args(v, fname);
+  if (err)
+    return err;
+  lobj* x;
+  if (v->count >= 2) {
+    x = lobj_pop(v, 0);
+    while (v->count > 0) {
+      lobj* y = lobj_pop(v, 0);
+      x->num = op(x->num, y->num);
+      lobj_del(y);
+    }
+  } else {
+    x = lobj_err("<function %s> expecting %s, got %d", fname, "> 2", v->count);
+  }
+  lobj_del(v);
+  return x;
+}
+
 double
 sub_(double a, double b)
 {
@@ -13,12 +47,15 @@ sub_(double a, double b)
 }
 
 lobj*
-lisp_sub(lenv*e, lobj* v)
+builtin_sub(lenv* e, lobj* v)
 {
+  lobj* err = check_args(v, "sub");
+  if (err)
+    return err;
   if (v->count == 1) {
     v->num = -v->num;
   } else {
-    v = lisp_rec_op(e, v, sub_);
+    v = recursive_op_(e, v, sub_, "sub");
   }
   return v;
 }
@@ -29,17 +66,23 @@ add_(double a, double b)
   return a + b;
 }
 lobj*
-lisp_add(lenv* e, lobj* v)
+builtin_add(lenv* e, lobj* v)
 {
-  if (v->count > 1) {
-    v = lisp_rec_op(e, v, add_);
+  lobj* err = check_args(v, "add");
+  if (err)
+    return err;
+  if (v->count != 1) {
+    v = recursive_op_(e, v, add_, "add");
   }
   return v;
 }
 
 lobj*
-lisp_div(lenv* e, lobj* v)
+builtin_div(lenv* e, lobj* v)
 {
+  lobj* err = check_args(v, "div");
+  if (err)
+    return err;
   lobj* x;
   if (v->count >= 2) {
     x = lobj_pop(v, 0);
@@ -48,14 +91,15 @@ lisp_div(lenv* e, lobj* v)
       if (y->num == 0) {
         lobj_del(x);
         lobj_del(y);
-        x = lobj_err("Division by zero");
+        x = lobj_err("<function %s> %s", "div", "division by zero");
         break;
       }
       x->num = x->num / y->num;
       lobj_del(y);
     }
   } else {
-    x = lobj_err("Wrong number of arguments");
+    x = lobj_err(
+      "<function %s>, expecting %s arguments, got %d", "div", "> 2", v->count);
   }
   lobj_del(v);
   return x;
@@ -67,9 +111,9 @@ mul_(double a, double b)
   return a * b;
 }
 lobj*
-lisp_mul(lenv* e, lobj* v)
+builtin_mul(lenv* e, lobj* v)
 {
-  return lisp_rec_op(e, v, mul_);
+  return recursive_op_(e, v, mul_, "mul");
 }
 
 double
@@ -78,9 +122,9 @@ min_(double a, double b)
   return a > b ? b : a;
 }
 lobj*
-lisp_min(lenv* e, lobj* v)
+builtin_min(lenv* e, lobj* v)
 {
-  return lisp_rec_op(e, v, min_);
+  return recursive_op_(e, v, min_, "min");
 }
 
 double
@@ -89,108 +133,66 @@ max_(double a, double b)
   return a < b ? b : a;
 }
 lobj*
-lisp_max(lenv* e, lobj* v)
+builtin_max(lenv* e, lobj* v)
 {
-  return lisp_rec_op(e, v, max_);
-}
-
-lobj*
-lisp_rec_op(lenv* e, lobj* v, double (*op)(double, double))
-{
-  lobj* x;
-  if (v->count >= 2) {
-    x = lobj_pop(v, 0);
-    while (v->count > 0) {
-      lobj* y = lobj_pop(v, 0);
-      x->num = op(x->num, y->num);
-      lobj_del(y);
-    }
-  } else {
-    x = lobj_err("Wrong number of arguments");
-  }
-  lobj_del(v);
-  return x;
+  return recursive_op_(e, v, max_, "max");
 }
 
 // binary
 lobj*
-lisp_binary_op(lenv* e, lobj* v, double (*op)(double, double))
+binary_op_(lenv* e, lobj* v, double (*op)(double, double), const char* fname)
 {
+  lobj* err = check_args(v, fname);
+  if (err)
+    return err;
   lobj* ret = NULL;
   if (v->count == 2) {
     ret = lobj_num(op(v->cell[0]->num, v->cell[1]->num));
   } else {
-    ret = lobj_err("Operator expects two arguments");
+    ret =
+      lobj_err("<function %s> expects two arguments, got %d", fname, v->count);
   }
   lobj_del(v);
   return ret;
 }
+
 lobj*
-lisp_mod(lenv* e, lobj* v)
+builtin_mod(lenv* e, lobj* v)
 {
-  return lisp_binary_op(e, v, fmod);
+  return binary_op_(e, v, fmod, "mod");
 }
+
 lobj*
-lisp_pow(lenv* e, lobj* v)
+builtin_pow(lenv* e, lobj* v)
 {
-  return lisp_binary_op(e, v, pow);
+  return binary_op_(e, v, pow, "pow");
 }
 
 // unary
 lobj*
-lisp_unary_op(lenv* e, lobj* v, double (*op)(double))
+unary_op_(lenv* e, lobj* v, double (*op)(double), const char* fname)
 {
+  lobj* err = check_args(v, "div");
+  if (err)
+    return err;
+
   lobj* ret = NULL;
   if (v->count == 1) {
     ret = lobj_num(op(v->cell[0]->num));
   } else {
-    ret = lobj_err("Operator expects two arguments");
+    ret =
+      lobj_err("<function %s> expects one arguments, got %d", fname, v->count);
   }
   lobj_del(v);
   return ret;
 }
 lobj*
-lisp_exp(lenv* e, lobj* v)
+builtin_exp(lenv* e, lobj* v)
 {
-  return lisp_unary_op(e, v, exp);
+  return unary_op_(e, v, exp, "exp");
 }
 lobj*
-lisp_log(lenv* e, lobj* v)
+builtin_log(lenv* e, lobj* v)
 {
-  return lisp_unary_op(e, v, log);
-}
-
-lobj*
-math_op(lenv*e, lobj* v, const char* sym)
-{
-  for (int i = 0; i < v->count; ++i) {
-    if (v->cell[i]->type != LOBJ_NUM) {
-      lobj_del(v);
-      return lobj_err("Cannot operate on non-number");
-    }
-  }
-  if (strcmp(sym, "sub") == 0 || strcmp(sym, "-") == 0) {
-    return lisp_sub(e, v);
-  } else if (strcmp(sym, "add") == 0 || strcmp(sym, "+") == 0) {
-    return lisp_add(e, v);
-  } else if (strcmp(sym, "div") == 0 || strcmp(sym, "/") == 0) {
-    return lisp_div(e, v);
-  } else if (strcmp(sym, "mul") == 0 || strcmp(sym, "*") == 0) {
-    return lisp_mul(e, v);
-  } else if (strcmp(sym, "mod") == 0 || strcmp(sym, "%") == 0) {
-    return lisp_mod(e, v);
-  } else if (strcmp(sym, "pow") == 0 || strcmp(sym, "^") == 0) {
-    return lisp_pow(e, v);
-  } else if (strcmp(sym, "exp") == 0) {
-    return lisp_exp(e, v);
-  } else if (strcmp(sym, "log") == 0) {
-    return lisp_log(e, v);
-  } else if (strcmp(sym, "min") == 0) {
-    return lisp_min(e, v);
-  } else if (strcmp(sym, "max") == 0) {
-    return lisp_max(e, v);
-  } else {
-    lobj_del(v);
-    return lobj_err("Unknown symbol");
-  }
+  return unary_op_(e, v, log, "log");
 }

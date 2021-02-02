@@ -1,11 +1,6 @@
-#include <errno.h>
-#include <stdio.h>
-// #include <stdarg.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-
 #include "lobj.h"
+
+#define ERR_STRING_LEN 512
 
 lobj*
 lobj_num(double x)
@@ -18,12 +13,20 @@ lobj_num(double x)
 }
 
 lobj*
-lobj_err(char* perr)
+lobj_err(char* fmt, ...)
 {
   lobj* v = (lobj*)malloc(sizeof(lobj));
   v->type = LOBJ_ERR;
-  v->err = malloc(strlen(perr) + 1);
-  strcpy(v->err, perr);
+
+  va_list va;
+  va_start(va, fmt);
+  
+  v->err = malloc(ERR_STRING_LEN);
+  vsnprintf(v->err, ERR_STRING_LEN-1, fmt, va);
+  
+  v->err = realloc(v->err, strlen(v->err) + 1);
+  va_end(va);
+  
   v->count = 0;
   return v;
 }
@@ -240,10 +243,28 @@ lobj_print(lobj* v)
   }
 }
 
-
 void
 lobj_println(lobj* v)
 {
   lobj_print(v);
   putchar('\n');
+}
+
+char* lobj_typename(lobj_type t) {
+  switch (t) {
+  case LOBJ_NUM:
+    return "Number";
+  case LOBJ_ERR:
+    return "Error";
+  case LOBJ_SYM:
+    return "Symbol";
+  case LOBJ_SEXPR:
+    return "S-Expression";
+  case LOBJ_QEXPR:
+    return "Q-Expression";
+  case LOBJ_FUNC:
+    return "Function";
+  default:
+    return "Unknown";
+  }
 }
