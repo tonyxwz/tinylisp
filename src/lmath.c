@@ -1,6 +1,7 @@
-#include "lisp_func.h"
+#include "lmath.h"
 #include "tl.h"
 #include <math.h>
+
 
 // local func declarations
 
@@ -11,8 +12,8 @@ sub_(double a, double b)
   return a - b;
 }
 
-lval*
-lisp_sub(lval* v)
+lobj*
+lisp_sub(lobj* v)
 {
   if (v->count == 1) {
     v->num = -v->num;
@@ -27,8 +28,8 @@ add_(double a, double b)
 {
   return a + b;
 }
-lval*
-lisp_add(lval* v)
+lobj*
+lisp_add(lobj* v)
 {
   if (v->count > 1) {
     v = lisp_rec_op(v, add_);
@@ -36,27 +37,27 @@ lisp_add(lval* v)
   return v;
 }
 
-lval*
-lisp_div(lval* v)
+lobj*
+lisp_div(lobj* v)
 {
-  lval* x;
+  lobj* x;
   if (v->count >= 2) {
-    x = lval_pop(v, 0);
+    x = lobj_pop(v, 0);
     while (v->count > 0) {
-      lval* y = lval_pop(v, 0);
+      lobj* y = lobj_pop(v, 0);
       if (y->num == 0) {
-        lval_del(x);
-        lval_del(y);
-        x = lval_err("Division by zero");
+        lobj_del(x);
+        lobj_del(y);
+        x = lobj_err("Division by zero");
         break;
       }
       x->num = x->num / y->num;
-      lval_del(y);
+      lobj_del(y);
     }
   } else {
-    x = lval_err("Wrong number of arguments");
+    x = lobj_err("Wrong number of arguments");
   }
-  lval_del(v);
+  lobj_del(v);
   return x;
 }
 
@@ -65,8 +66,8 @@ mul_(double a, double b)
 {
   return a * b;
 }
-lval*
-lisp_mul(lval* v)
+lobj*
+lisp_mul(lobj* v)
 {
   return lisp_rec_op(v, mul_);
 }
@@ -76,8 +77,8 @@ min_(double a, double b)
 {
   return a > b ? b : a;
 }
-lval*
-lisp_min(lval* v)
+lobj*
+lisp_min(lobj* v)
 {
   return lisp_rec_op(v, min_);
 }
@@ -87,74 +88,74 @@ max_(double a, double b)
 {
   return a < b ? b : a;
 }
-lval*
-lisp_max(lval* v)
+lobj*
+lisp_max(lobj* v)
 {
   return lisp_rec_op(v, max_);
 }
 
-lval*
-lisp_rec_op(lval* v, double (*op)(double, double))
+lobj*
+lisp_rec_op(lobj* v, double (*op)(double, double))
 {
-  lval* x;
+  lobj* x;
   if (v->count >= 2) {
-    x = lval_pop(v, 0);
+    x = lobj_pop(v, 0);
     while (v->count > 0) {
-      lval* y = lval_pop(v, 0);
+      lobj* y = lobj_pop(v, 0);
       x->num = op(x->num, y->num);
-      lval_del(y);
+      lobj_del(y);
     }
   } else {
-    x = lval_err("Wrong number of arguments");
+    x = lobj_err("Wrong number of arguments");
   }
-  lval_del(v);
+  lobj_del(v);
   return x;
 }
 
 // binary
-lval*
-lisp_binary_op(lval* v, double (*op)(double, double))
+lobj*
+lisp_binary_op(lobj* v, double (*op)(double, double))
 {
-  lval* ret = NULL;
+  lobj* ret = NULL;
   if (v->count == 2) {
-    ret = lval_num(op(v->cell[0]->num, v->cell[1]->num));
+    ret = lobj_num(op(v->cell[0]->num, v->cell[1]->num));
   } else {
-    ret = lval_err("Operator expects two arguments");
+    ret = lobj_err("Operator expects two arguments");
   }
-  lval_del(v);
+  lobj_del(v);
   return ret;
 }
-lval*
-lisp_mod(lval* v)
+lobj*
+lisp_mod(lobj* v)
 {
   return lisp_binary_op(v, fmod);
 }
-lval*
-lisp_pow(lval* v)
+lobj*
+lisp_pow(lobj* v)
 {
   return lisp_binary_op(v, pow);
 }
 
 // unary
-lval*
-lisp_unary_op(lval* v, double (*op)(double))
+lobj*
+lisp_unary_op(lobj* v, double (*op)(double))
 {
-  lval* ret = NULL;
+  lobj* ret = NULL;
   if (v->count == 1) {
-    ret = lval_num(op(v->cell[0]->num));
+    ret = lobj_num(op(v->cell[0]->num));
   } else {
-    ret = lval_err("Operator expects two arguments");
+    ret = lobj_err("Operator expects two arguments");
   }
-  lval_del(v);
+  lobj_del(v);
   return ret;
 }
-lval*
-lisp_exp(lval* v)
+lobj*
+lisp_exp(lobj* v)
 {
   return lisp_unary_op(v, exp);
 }
-lval*
-lisp_log(lval* v)
+lobj*
+lisp_log(lobj* v)
 {
   return lisp_unary_op(v, log);
 }

@@ -10,200 +10,10 @@
 #include <readline/readline.h>
 
 #include "tl.h"
-#include "lisp_func.h"
+#include "lobj.h"
+#include "lmath.h"
 #include "qexpr.h"
 
-lval*
-lval_num(double x)
-{
-  lval* v = (lval*)malloc(sizeof(lval));
-  v->type = LVAL_NUM;
-  v->num = x;
-  v->count = 0;
-  return v;
-}
-
-lval*
-lval_err(char* perr)
-{
-  lval* v = (lval*)malloc(sizeof(lval));
-  v->type = LVAL_ERR;
-  v->err = malloc(strlen(perr) + 1);
-  strcpy(v->err, perr);
-  v->count = 0;
-  return v;
-}
-
-lval*
-lval_sym(char* psym)
-{
-  lval* v = (lval*)malloc(sizeof(lval));
-  v->type = LVAL_SYM;
-  v->sym = malloc(strlen(psym) + 1);
-  strcpy(v->sym, psym);
-  v->count = 0;
-  return v;
-}
-
-lval*
-lval_sexpr(void)
-{
-  lval* v = malloc(sizeof(lval));
-  v->type = LVAL_SEXPR;
-  v->count = 0;
-  v->cell = NULL;
-  return v;
-}
-
-lval*
-lval_qexpr(void)
-{
-  lval* v = malloc(sizeof(lval));
-  v->type = LVAL_QEXPR;
-  v->cell = NULL;
-  v->count = 0;
-  return v;
-}
-
-void
-lval_del(lval* v)
-{
-  // printf("deleted %d\n", v->type);
-  switch (v->type) {
-    case LVAL_NUM:
-      break;
-    case LVAL_ERR:
-      free(v->err);
-      break;
-    case LVAL_SYM:
-      free(v->sym);
-      break;
-    case LVAL_SEXPR:
-    case LVAL_QEXPR:
-      for (int i = 0; i < v->count; ++i)
-        lval_del(v->cell[i]);
-      free(v->cell);
-      break;
-    default:
-      break;
-  }
-  free(v);
-}
-
-// pop and delete original
-lval*
-lval_take(lval* sexpr, int i)
-{
-  // TODO no need to shift if cells are disgarded very soon
-  lval* pop = lval_pop(sexpr, i);
-  lval_del(sexpr);
-  return pop;
-}
-
-lval*
-lval_pop(lval* sexpr, int i)
-{ // TODO should throw exception if i >= count
-  lval* pop = sexpr->cell[i];
-  memmove(&sexpr->cell[i],     // popped item: sexpr->cell+i
-          &sexpr->cell[i + 1], // next item: sexpr->cell+i+1
-          sizeof(lval*) *
-            (sexpr->count - i - 1) // number of item left starting from i
-  );
-  sexpr->count--;
-  sexpr->cell = realloc(sexpr->cell, sizeof(lval*) * sexpr->count);
-  return pop;
-}
-
-lval*
-lval_read_num(const mpc_ast_t* ast)
-{
-  errno = 0;
-  double x = strtod(ast->contents, NULL);
-  if (errno == 0)
-    return lval_num(x);
-  else
-    return lval_err("invalid number");
-}
-
-lval*
-lval_read(const mpc_ast_t* ast)
-{
-  if (strstr(ast->tag, "number"))
-    return lval_read_num(ast);
-  if (strstr(ast->tag, "symbol"))
-    return lval_sym(ast->contents);
-
-  lval* x = NULL;
-  if (strcmp(ast->tag, ">") == 0 || // root node (everything is expr first)
-      strstr(ast->tag, "sexpr"))    // sexpr
-    x = lval_sexpr();
-  if (strstr(ast->tag, "qexpr"))
-    x = lval_qexpr();
-  
-
-  for (int i = 0; i < ast->children_num; ++i) {
-    if (strcmp(ast->children[i]->contents, "(") == 0 ||  // sexpr branch
-        strcmp(ast->children[i]->contents, ")") == 0 ||
-        strcmp(ast->children[i]->contents, "{") == 0 ||  // qexpr branch
-        strcmp(ast->children[i]->contents, "}") == 0 ||
-        strcmp(ast->children[i]->tag, "regex") == 0)
-      continue;
-    x = lval_add(x, lval_read(ast->children[i]));
-  }
-  return x;
-}
-
-lval*
-lval_add(lval* dest, lval* x)
-{
-  dest->count++;
-  dest->cell = realloc(dest->cell, sizeof(lval) * dest->count);
-  dest->cell[dest->count - 1] = x;
-  return dest;
-}
-
-void
-lval_print_expr(lval* v, char open, char close)
-{
-  putchar(open);
-  for (int i = 0; i < v->count; ++i) {
-    lval_print(v->cell[i]);
-    if (i != v->count - 1)
-      putchar(' ');
-  }
-  putchar(close);
-}
-
-void
-lval_print(lval* v)
-{
-  switch (v->type) {
-    case LVAL_ERR:
-      printf("Error: %s", v->err);
-      break;
-    case LVAL_NUM:
-      printf("%f", v->num);
-      break;
-    case LVAL_SYM:
-      printf("%s", v->sym);
-      break;
-    case LVAL_SEXPR:
-      lval_print_expr(v, '(', ')');
-      break;
-    case LVAL_QEXPR:
-      lval_print_expr(v, '{', '}');
-      break;
-    default:
-      break;
-  }
-}
-
-void
-lval_println(lval* v)
-{
-  lval_print(v);
-  putchar('\n');
-}
 
 int
 repl()
@@ -215,14 +25,17 @@ repl()
   mpc_parser_t* Expr = mpc_new("expr");
   mpc_parser_t* TL = mpc_new("tl");
 
+    // symbol: '+' | '-' | '*' | '/' | '%' | '^' | \
+    //     \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \
+    //     \"exp\" | \"log\" | \"pow\" | \
+    //     \"min\" | \"max\" | \
+    //     \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\"; \
+    //
+
   mpca_lang(MPCA_LANG_DEFAULT,
             " \
     number   : /(\\b|\\B)-?([0-9]*\\.)?[0-9]+(\\B|\\b)/ ; \
-    symbol: '+' | '-' | '*' | '/' | '%' | '^' | \
-        \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \
-        \"exp\" | \"log\" | \"pow\" | \
-        \"min\" | \"max\" | \
-        \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\"; \
+    symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ; \
     sexpr: '(' <expr>* ')' ;\
     qexpr: '{' <expr>* '}'; \
     expr     : <number> | <symbol> | <sexpr> | <qexpr> ; \
@@ -248,9 +61,9 @@ repl()
     mpc_result_t r;
     if (mpc_parse("<stdin>", input, TL, &r)) {
       mpc_ast_print(r.output);
-      lval* tmp = eval(lval_read(r.output));
-      lval_println(tmp);
-      lval_del(tmp);
+      lobj* tmp = eval(lobj_read(r.output));
+      lobj_println(tmp);
+      lobj_del(tmp);
       mpc_ast_delete(r.output);
     } else {
       mpc_err_print(r.error);
@@ -264,22 +77,22 @@ repl()
   return 0;
 }
 
-lval*
-eval(lval* v)
+lobj*
+eval(lobj* v)
 {
-  if (v->type == LVAL_SEXPR)
+  if (v->type == LOBJ_SEXPR)
     return eval_sexpr(v);
   else
     return v;
 }
 
-/* Think of func `eval` as a transformer, taking in one lval* transform it and
+/* Think of func `eval` as a transformer, taking in one lobj* transform it and
  * return back.
- * lval(sexpr) -> lval(num/err)
- * since lval_read always read a expression as a sexpr
+ * lobj(sexpr) -> lobj(num/err)
+ * since lobj_read always read a expression as a sexpr
  */
-lval*
-eval_sexpr(lval* v)
+lobj*
+eval_sexpr(lobj* v)
 {
   // evaluate all the childrens
   for (int i = 0; i < v->count; ++i) {
@@ -287,28 +100,28 @@ eval_sexpr(lval* v)
   }
   // error handling
   for (int i = 0; i < v->count; ++i) {
-    if (v->cell[i]->type == LVAL_ERR)
-      return lval_take(v, i);
+    if (v->cell[i]->type == LOBJ_ERR)
+      return lobj_take(v, i);
   }
   if (v->count == 0) // empty expression ()
     return v;
   if (v->count == 1) // empty expression (5)
-    return lval_take(v, 0);
+    return lobj_take(v, 0);
 
   // operator/symbol is the first cell of sexpr
-  lval* op = lval_pop(v, 0);
-  if (op->type != LVAL_SYM) {
-    lval_del(v);
-    lval_del(op);
-    return lval_err("sexpr must start with operator");
+  lobj* op = lobj_pop(v, 0);
+  if (op->type != LOBJ_SYM) {
+    lobj_del(v);
+    lobj_del(op);
+    return lobj_err("sexpr must start with operator");
   }
   // v contains only nums
-  lval* result = buildin(v, op->sym); // sexpr -> num
-  lval_del(op);
+  lobj* result = buildin(v, op->sym); // sexpr -> num
+  lobj_del(op);
   return result;
 }
 
-lval* buildin(lval* v, const char* sym) {
+lobj* buildin(lobj* v, const char* sym) {
   if (strcmp(sym, "head") == 0) {
     return qhead(v);
   } else if (strcmp(sym, "tail") == 0) {
@@ -322,18 +135,18 @@ lval* buildin(lval* v, const char* sym) {
   } else if (strstr("+ - * / % ^ add sub mul div mod pow exp log min max", sym)) {
     return math_op(v, sym);
   } else {
-    lval_del(v);
-    return lval_err("Unknown symbol");
+    lobj_del(v);
+    return lobj_err("Unknown symbol");
   }
 }
 
-lval*
-math_op(lval* v, const char* sym)
+lobj* 
+math_op(lobj* v, const char* sym)
 {
   for (int i = 0; i < v->count; ++i) {
-    if (v->cell[i]->type != LVAL_NUM) {
-      lval_del(v);
-      return lval_err("Cannot operate on non-number");
+    if (v->cell[i]->type != LOBJ_NUM) {
+      lobj_del(v);
+      return lobj_err("Cannot operate on non-number");
     }
   }
   if (strcmp(sym, "sub") == 0 || strcmp(sym, "-") == 0) {
@@ -357,7 +170,13 @@ math_op(lval* v, const char* sym)
   } else if (strcmp(sym, "max") == 0) {
     return lisp_max(v);
   } else {
-    lval_del(v);
-    return lval_err("Unknown symbol");
+    lobj_del(v);
+    return lobj_err("Unknown symbol");
   }
+}
+
+int
+main(int argc, char** argv)
+{
+  return repl();
 }

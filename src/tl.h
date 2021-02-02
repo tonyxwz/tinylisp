@@ -5,53 +5,14 @@ extern "C" {
 #endif
 
 #include "mpc.h"
+#include "lobj.h"
 
-#define LASSERT(args, cond, emsg) \
-  if (!(cond)) {lval_del(args); return lval_err(emsg);}
-
-typedef enum
-{
-  LVAL_ERR,
-  LVAL_NUM,
-  LVAL_SYM,
-  LVAL_SEXPR,
-  LVAL_QEXPR
-} lval_type;
-
-
-typedef struct lval
-{
-  lval_type type;
-  double num; // number
-  char* err; // error message
-  char* sym; // symbol
-  // list of other lval's contained in sexpr
-  int count;
-  struct lval** cell;
-} lval;
-
-// ctor dtor 
-lval* lval_num(double x);
-lval* lval_err(char* perr);
-lval* lval_sym(char* psym);
-lval* lval_sexpr(void);
-lval* lval_qexpr(void);
-void lval_del(lval* v);
-lval* lval_take(lval* sexpr, int i);
-lval* lval_pop(lval* sexpr, int i);
-
-// lexing and parsing
-lval* lval_read_num(const mpc_ast_t* ast);
-lval* lval_read(const mpc_ast_t* ast);
-lval* lval_add(lval*, lval*);
-void lval_print_expr(lval* v, char open, char close);
-void lval_print(lval* v);
 
 // evaluate
-lval* eval_sexpr(lval* v);
-lval* eval(lval* v);
-lval* buildin(lval* v, const char* sym);
-lval* math_op(lval* v, const char* sym);
+lobj* eval_sexpr(lobj* v);
+lobj* eval(lobj* v);
+lobj* buildin(lobj* v, const char* sym);
+lobj* math_op(lobj* v, const char* sym);
 
 int repl();
 
