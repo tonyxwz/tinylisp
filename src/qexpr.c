@@ -2,7 +2,7 @@
 #include "tl.h"
 
 lobj*
-qhead(lobj* v)
+qhead(lenv* e, lobj* v)
 {
   printf("%d\n", v->type);
   LASSERT(v, v->count == 1, "head requires 1 argument");
@@ -15,7 +15,7 @@ qhead(lobj* v)
 }
 
 lobj*
-qtail(lobj* v)
+qtail(lenv* e, lobj* v)
 {
   printf("%d\n", v->type);
   LASSERT(v, v->count == 1, "tail requires 1 argument");
@@ -27,20 +27,20 @@ qtail(lobj* v)
 }
 
 lobj*
-qlist(lobj* v)
+qlist(lenv* e, lobj* v)
 {
   v->type = LOBJ_QEXPR;
   return v;
 }
 
 lobj*
-qeval(lobj* v)
+qeval(lenv* e, lobj* v)
 {
   LASSERT(v, v->count == 1, "eval requires 1 argument");
   LASSERT(v, v->cell[0]->type == LOBJ_QEXPR, "eval requires qexpr");
   lobj* sexpr = lobj_take(v, 0);
   sexpr->type = LOBJ_SEXPR;
-  lobj* r = eval(sexpr);
+  lobj* r = eval(e, sexpr);
   return r;
 }
 
@@ -55,7 +55,7 @@ lobj_join(lobj* a, lobj* b)
 }
 
 lobj*
-qjoin(lobj* v)
+qjoin(lenv* e, lobj* v)
 {
   for (int i = 0; i < v->count; ++i) {
     LASSERT(v, v->cell[i]->type == LOBJ_QEXPR, "join requires qexpr arguments");

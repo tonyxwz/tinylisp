@@ -1,5 +1,5 @@
 #include "lmath.h"
-#include "tl.h"
+#include "lobj.h"
 #include <math.h>
 
 
@@ -13,12 +13,12 @@ sub_(double a, double b)
 }
 
 lobj*
-lisp_sub(lobj* v)
+lisp_sub(lenv*e, lobj* v)
 {
   if (v->count == 1) {
     v->num = -v->num;
   } else {
-    v = lisp_rec_op(v, sub_);
+    v = lisp_rec_op(e, v, sub_);
   }
   return v;
 }
@@ -29,16 +29,16 @@ add_(double a, double b)
   return a + b;
 }
 lobj*
-lisp_add(lobj* v)
+lisp_add(lenv* e, lobj* v)
 {
   if (v->count > 1) {
-    v = lisp_rec_op(v, add_);
+    v = lisp_rec_op(e, v, add_);
   }
   return v;
 }
 
 lobj*
-lisp_div(lobj* v)
+lisp_div(lenv* e, lobj* v)
 {
   lobj* x;
   if (v->count >= 2) {
@@ -67,9 +67,9 @@ mul_(double a, double b)
   return a * b;
 }
 lobj*
-lisp_mul(lobj* v)
+lisp_mul(lenv* e, lobj* v)
 {
-  return lisp_rec_op(v, mul_);
+  return lisp_rec_op(e, v, mul_);
 }
 
 double
@@ -78,9 +78,9 @@ min_(double a, double b)
   return a > b ? b : a;
 }
 lobj*
-lisp_min(lobj* v)
+lisp_min(lenv* e, lobj* v)
 {
-  return lisp_rec_op(v, min_);
+  return lisp_rec_op(e, v, min_);
 }
 
 double
@@ -89,13 +89,13 @@ max_(double a, double b)
   return a < b ? b : a;
 }
 lobj*
-lisp_max(lobj* v)
+lisp_max(lenv* e, lobj* v)
 {
-  return lisp_rec_op(v, max_);
+  return lisp_rec_op(e, v, max_);
 }
 
 lobj*
-lisp_rec_op(lobj* v, double (*op)(double, double))
+lisp_rec_op(lenv* e, lobj* v, double (*op)(double, double))
 {
   lobj* x;
   if (v->count >= 2) {
@@ -114,7 +114,7 @@ lisp_rec_op(lobj* v, double (*op)(double, double))
 
 // binary
 lobj*
-lisp_binary_op(lobj* v, double (*op)(double, double))
+lisp_binary_op(lenv* e, lobj* v, double (*op)(double, double))
 {
   lobj* ret = NULL;
   if (v->count == 2) {
@@ -126,19 +126,19 @@ lisp_binary_op(lobj* v, double (*op)(double, double))
   return ret;
 }
 lobj*
-lisp_mod(lobj* v)
+lisp_mod(lenv* e, lobj* v)
 {
-  return lisp_binary_op(v, fmod);
+  return lisp_binary_op(e, v, fmod);
 }
 lobj*
-lisp_pow(lobj* v)
+lisp_pow(lenv* e, lobj* v)
 {
-  return lisp_binary_op(v, pow);
+  return lisp_binary_op(e, v, pow);
 }
 
 // unary
 lobj*
-lisp_unary_op(lobj* v, double (*op)(double))
+lisp_unary_op(lenv* e, lobj* v, double (*op)(double))
 {
   lobj* ret = NULL;
   if (v->count == 1) {
@@ -150,12 +150,47 @@ lisp_unary_op(lobj* v, double (*op)(double))
   return ret;
 }
 lobj*
-lisp_exp(lobj* v)
+lisp_exp(lenv* e, lobj* v)
 {
-  return lisp_unary_op(v, exp);
+  return lisp_unary_op(e, v, exp);
 }
 lobj*
-lisp_log(lobj* v)
+lisp_log(lenv* e, lobj* v)
 {
-  return lisp_unary_op(v, log);
+  return lisp_unary_op(e, v, log);
+}
+
+lobj*
+math_op(lenv*e, lobj* v, const char* sym)
+{
+  for (int i = 0; i < v->count; ++i) {
+    if (v->cell[i]->type != LOBJ_NUM) {
+      lobj_del(v);
+      return lobj_err("Cannot operate on non-number");
+    }
+  }
+  if (strcmp(sym, "sub") == 0 || strcmp(sym, "-") == 0) {
+    return lisp_sub(e, v);
+  } else if (strcmp(sym, "add") == 0 || strcmp(sym, "+") == 0) {
+    return lisp_add(e, v);
+  } else if (strcmp(sym, "div") == 0 || strcmp(sym, "/") == 0) {
+    return lisp_div(e, v);
+  } else if (strcmp(sym, "mul") == 0 || strcmp(sym, "*") == 0) {
+    return lisp_mul(e, v);
+  } else if (strcmp(sym, "mod") == 0 || strcmp(sym, "%") == 0) {
+    return lisp_mod(e, v);
+  } else if (strcmp(sym, "pow") == 0 || strcmp(sym, "^") == 0) {
+    return lisp_pow(e, v);
+  } else if (strcmp(sym, "exp") == 0) {
+    return lisp_exp(e, v);
+  } else if (strcmp(sym, "log") == 0) {
+    return lisp_log(e, v);
+  } else if (strcmp(sym, "min") == 0) {
+    return lisp_min(e, v);
+  } else if (strcmp(sym, "max") == 0) {
+    return lisp_max(e, v);
+  } else {
+    lobj_del(v);
+    return lobj_err("Unknown symbol");
+  }
 }

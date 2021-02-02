@@ -11,22 +11,19 @@ extern "C"
 #include "lobj.h"
 
   // {1 2 3} -> {1}
-  lobj* qhead(lobj* v);
+  lobj* qhead(lenv* e, lobj* v);
 
   // {1 2 3} -> {2 3}
-  lobj* qtail(lobj* v);
+  lobj* qtail(lenv* e, lobj* v);
 
   // 1 2 3 -> {1 2 3}
-  lobj* qlist(lobj* v);
+  lobj* qlist(lenv*e, lobj* v);
 
   // {1}{2}{3} -> {1 2 3}
-  lobj* qjoin(lobj* v);
+  lobj* qjoin(lenv*e, lobj* v);
 
   // qexpr -> num
-  lobj* qeval(lobj* v);
-
-
-
+  lobj* qeval(lenv* e, lobj* v);
 
 #ifdef __cplusplus
 } // extern "C"

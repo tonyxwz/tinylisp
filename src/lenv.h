@@ -17,8 +17,12 @@ struct lenv {
 };
 
 lenv* lenv_new(void);
+void lenv_del(lenv* e);
+
 void lenv_put(lenv* env, lobj* k, lobj* v);
-lobj* lenv_get(lenv* env, const char* sym);
+lobj* lenv_get(lenv* env, lobj* k);
+
+void lenv_move(lenv* env, lobj* k ,lobj* v);
 
 #ifdef __cplusplus
 } // extern "C"

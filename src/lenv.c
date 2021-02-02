@@ -43,3 +43,19 @@ lenv_put(lenv* env, lobj* k, lobj* v)
   env->syms[env->count - 1] = malloc(strlen(k->sym) + 1);
   strcpy(env->syms[env->count - 1], k->sym);
 }
+
+void lenv_move(lenv* env, lobj* k ,lobj* v) {
+  lenv_put(env, k, v);
+  lobj_del(k); lobj_del(v);
+}
+
+
+lobj* lenv_get(lenv* env, lobj* k) {
+  for(int i = 0; i < env->count; ++i) {
+    if (strcmp(env->syms[i], k->sym) == 0)
+      return lobj_copy(env->objs[i]);
+  }
+  return lobj_err("Error: unbound symbol");
+}
+
+
