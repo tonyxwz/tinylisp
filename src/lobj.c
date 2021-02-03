@@ -1,51 +1,69 @@
 #include "lobj.h"
+#include "lenv.h"
+#include "qexpr.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 #define ERR_STRING_LEN 512
 
 lobj*
-lobj_num(double x)
+lobj_common_init()
 {
   lobj* v = (lobj*)malloc(sizeof(lobj));
+  v->num = 0;
+  v->constant = false;
+  v->err = NULL;
+  v->sym = NULL;
+  v->env = NULL;
+  v->builtin = NULL;
+  v->formals = NULL;
+  v->body = NULL;
+  v->count = 0;
+  v->cell = NULL;
+  return v;
+}
+
+lobj*
+lobj_num(double x)
+{
+  lobj* v = lobj_common_init();
   v->type = LOBJ_NUM;
   v->num = x;
-  v->count = 0;
   return v;
 }
 
 lobj*
 lobj_err(char* fmt, ...)
 {
-  lobj* v = (lobj*)malloc(sizeof(lobj));
+  lobj* v = lobj_common_init();
   v->type = LOBJ_ERR;
 
   va_list va;
   va_start(va, fmt);
-  
+
   v->err = malloc(ERR_STRING_LEN);
-  vsnprintf(v->err, ERR_STRING_LEN-1, fmt, va);
-  
+  vsnprintf(v->err, ERR_STRING_LEN - 1, fmt, va);
+
   v->err = realloc(v->err, strlen(v->err) + 1);
   va_end(va);
-  
-  v->count = 0;
+
   return v;
 }
 
 lobj*
 lobj_sym(char* psym)
 {
-  lobj* v = (lobj*)malloc(sizeof(lobj));
+  lobj* v = lobj_common_init();
   v->type = LOBJ_SYM;
   v->sym = malloc(strlen(psym) + 1);
   strcpy(v->sym, psym);
-  v->count = 0;
   return v;
 }
 
 lobj*
 lobj_sexpr(void)
 {
-  lobj* v = malloc(sizeof(lobj));
+  lobj* v = lobj_common_init();
   v->type = LOBJ_SEXPR;
   v->count = 0;
   v->cell = NULL;
@@ -55,19 +73,32 @@ lobj_sexpr(void)
 lobj*
 lobj_qexpr(void)
 {
-  lobj* v = malloc(sizeof(lobj));
+  lobj* v = lobj_common_init();
   v->type = LOBJ_QEXPR;
-  v->cell = NULL;
   v->count = 0;
+  v->cell = NULL;
   return v;
 }
 
 lobj*
 lobj_func(lbuiltinFunc func)
 {
-  lobj* v = malloc(sizeof(lobj));
+  lobj* v = lobj_common_init();
   v->type = LOBJ_FUNC;
-  v->func = func;
+  v->builtin = func;
+  return v;
+}
+
+lobj*
+lobj_lambda(lobj* formals, lobj* body)
+{
+  // qexpr, qexpr
+  lobj* v = lobj_common_init();
+  v->type = LOBJ_FUNC;
+  v->builtin = NULL;
+  v->env = lenv_new();
+  v->formals = formals;
+  v->body = body;
   return v;
 }
 
@@ -91,6 +122,12 @@ lobj_del(lobj* v)
       free(v->cell);
       break;
     case LOBJ_FUNC:
+      // user defined
+      if (!v->builtin) {
+        lobj_del(v->formals);
+        lobj_del(v->body);
+        lenv_del(v->env);
+      }
       break;
     default:
       break;
@@ -101,7 +138,7 @@ lobj_del(lobj* v)
 lobj*
 lobj_copy(lobj* v)
 {
-  lobj* x = malloc(sizeof(lobj));
+  lobj* x = lobj_common_init();
   x->type = v->type;
 
   switch (v->type) {
@@ -124,11 +161,52 @@ lobj_copy(lobj* v)
         x->cell[i] = lobj_copy(v->cell[i]);
       break;
     case LOBJ_FUNC:
-      x->func = v->func;
+      if (v->builtin) {
+        x->builtin = v->builtin;
+      } else {
+        x->formals = lobj_copy(v->formals);
+        x->body = lobj_copy(v->body);
+        x->env = lenv_copy(v->env); // TODO
+      }
       break;
     default:
       break;
   }
+  return x;
+}
+
+lobj*
+lobj_move(lobj* v)
+{
+  lobj* x = lobj_common_init();
+  x->type = v->type;
+
+  switch (v->type) {
+    case LOBJ_ERR:
+      x->err = v->err;
+      v->err = NULL;
+      break;
+    case LOBJ_NUM:
+      x->num = v->num;
+      break;
+    case LOBJ_SYM:
+      x->sym = v->sym;
+      v->sym = NULL;
+      break;
+    case LOBJ_SEXPR:
+    case LOBJ_QEXPR:
+      x->count = v->count;
+      x->cell = v->cell;
+      v->count = 0;
+      v->cell = NULL;
+      break;
+    case LOBJ_FUNC:
+      x->builtin = v->builtin;
+      break;
+    default:
+      break;
+  }
+  lobj_del(v);
   return x;
 }
 
@@ -210,7 +288,7 @@ lobj_print_expr(lobj* v, char open, char close)
   putchar(open);
   for (int i = 0; i < v->count; ++i) {
     lobj_print(v->cell[i]);
-    if (i != v->count - 1)
+    if (i != v->count - 1) // last member
       putchar(' ');
   }
   putchar(close);
@@ -236,7 +314,15 @@ lobj_print(lobj* v)
       lobj_print_expr(v, '{', '}');
       break;
     case LOBJ_FUNC:
-      printf("<function>");
+      if (v->builtin) {
+        printf("<builtin>");
+      } else {
+        printf("(\\ ");
+        lobj_print(v->formals);
+        putchar(' ');
+        lobj_print(v->body);
+        putchar(')');
+      }
       break;
     default:
       break;
@@ -250,21 +336,37 @@ lobj_println(lobj* v)
   putchar('\n');
 }
 
-char* lobj_typename(lobj_type t) {
+char*
+lobj_typename(lobj_type t)
+{
   switch (t) {
-  case LOBJ_NUM:
-    return "Number";
-  case LOBJ_ERR:
-    return "Error";
-  case LOBJ_SYM:
-    return "Symbol";
-  case LOBJ_SEXPR:
-    return "S-Expression";
-  case LOBJ_QEXPR:
-    return "Q-Expression";
-  case LOBJ_FUNC:
-    return "Function";
-  default:
-    return "Unknown";
+    case LOBJ_NUM:
+      return "Number";
+    case LOBJ_ERR:
+      return "Error";
+    case LOBJ_SYM:
+      return "Symbol";
+    case LOBJ_SEXPR:
+      return "S-Expression";
+    case LOBJ_QEXPR:
+      return "Q-Expression";
+    case LOBJ_FUNC:
+      return "Function";
+    default:
+      return "Unknown";
   }
+}
+
+lobj*
+lobj_call(lobj* f, lobj* args, lenv* env)
+{
+  if (f->builtin) {
+    return f->builtin(env, args);
+  }
+  for (int i = 0; i < args->count; ++i) {
+    lenv_create(f->env, f->formals->cell[i], args->cell[i]);
+  }
+  lobj_del(args);
+  f->env->par = env;
+  return builtin_eval(f->env, lobj_append(lobj_sexpr(), lobj_copy(f->body)));
 }

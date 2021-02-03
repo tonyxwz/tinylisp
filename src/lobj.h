@@ -14,6 +14,7 @@ extern "C"
 #include <stdbool.h>
 
 #include "mpc.h"
+// TODO Define more functions
 // ASSERT_OR_CLEAN ...->##__VA_ARGS__
 #define LASSERT(args, cond, emsg, ...)                                         \
   if (!(cond)) {                                                               \
@@ -21,7 +22,31 @@ extern "C"
     lobj_del(args);                                                            \
     return err;                                                                \
   }
-// TODO Define more functions
+#define LASSERT_ARGC(fname, args, expect)                                      \
+  LASSERT(args,                                                                \
+          args->count == expect,                                               \
+          "<function %s> wrong number of cells, expecting %d, got %d",         \
+          fname,                                                               \
+          expect,                                                              \
+          args->count);
+
+#define LASSERT_TYPE(fname, obj, expect)                                       \
+  LASSERT(obj,                                                                 \
+          obj->type == expect,                                                 \
+          "<function %s> wrong argument types, expecting %s, got %s",          \
+          fname,                                                               \
+          lobj_typename(expect),                                               \
+          lobj_typename(obj->type))
+
+// warning, use after ASSERT_COUNT
+#define LASSERT_TYPE_I(fname, args, index, expect)                             \
+  LASSERT(args,                                                                \
+          args->cell[index]->type == expect,                                   \
+          "<function %s> got %s at argument %d, expecting %s",                 \
+          fname,                                                               \
+          lobj_typename(args->cell[index]->type),                              \
+          index + 1,                                                           \
+          lobj_typename(expect))
 
   typedef enum
   {
@@ -43,13 +68,24 @@ extern "C"
   struct lobj
   {
     lobj_type type;
-    double num;        // number
-    char* err;         // error message
-    char* sym;         // symbol
-    lbuiltinFunc func; // func
-    int count;
-    struct lobj** cell; // list of other lobj's contained in sexpr
+    // number
+    double num;
     bool constant;
+    // error message
+    char* err;
+    // symbol
+    char* sym;
+
+    // func
+    lbuiltinFunc builtin;
+    lenv* env;
+    lobj* formals; // func args: qexpr
+    lobj* body;    // func body: qexpr
+
+    // expressions
+    int count;
+    // list of other lobj's contained in expr
+    struct lobj** cell;
   };
 
   // ctor dtor
@@ -59,11 +95,14 @@ extern "C"
   lobj* lobj_sexpr(void);
   lobj* lobj_qexpr(void);
   lobj* lobj_func(lbuiltinFunc func);
+  lobj* lobj_lambda(lobj* formals, lobj* body);
 
   void lobj_del(lobj* v);
   lobj* lobj_take(lobj* sexpr, int i);
   lobj* lobj_pop(lobj* sexpr, int i);
   lobj* lobj_copy(lobj* v);
+  lobj* lobj_move(lobj* v);
+  
 
   // lexing and parsing
   lobj* lobj_read_num(const mpc_ast_t* ast);
@@ -72,7 +111,9 @@ extern "C"
   void lobj_print_expr(lobj* v, char open, char close);
   void lobj_print(lobj* v);
   void lobj_println(lobj* v);
-  char* lobj_typename(lobj_type t); // TODO
+  char* lobj_typename(lobj_type t);
+
+  lobj* lobj_call(lobj* f, lobj* args, lenv* env);
 
 #ifdef __cplusplus
 } // extern "C"

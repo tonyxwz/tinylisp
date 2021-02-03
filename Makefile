@@ -25,10 +25,9 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 # These files will have .d instead of .o as the output.
 
 ASANFLAGS := -fsanitize=address -fno-omit-frame-pointer
-CPPFLAGS  := $(INC_FLAGS) -MMD -MP -Wall -Wextra -g -O0 $(ASANFLAGS)
+# -Wextra
+CPPFLAGS  := $(INC_FLAGS) -MMD -MP -Wall -g -O0 $(ASANFLAGS)
 LDFLAGS   := -g -lm -lreadline $(ASANFLAGS)
-
-default: run
 
 # The final build step.
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
@@ -51,6 +50,7 @@ clean:
 
 run: $(BUILD_DIR)/$(TARGET_EXEC)
 	@$(BUILD_DIR)/$(TARGET_EXEC)
+
 # Include the .d makefiles. The - at the front suppresses the errors of missing
 # Makefiles. Initially, all the .d files will be missing, and we don't want those
 # errors to show up.

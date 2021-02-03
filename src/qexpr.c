@@ -11,12 +11,6 @@ check_args_(lobj* v, const char* fname)
           1,
           v->count);
   LASSERT(v,
-          v->cell[0]->type == LOBJ_QEXPR,
-          "<function %s> expects %s argument, got %s",
-          fname,
-          lobj_typename(LOBJ_QEXPR),
-          lobj_typename(v->cell[0]->type));
-  LASSERT(v,
           v->cell[0]->count != 0,
           "<function %s> requires non-empty argument",
           fname);
