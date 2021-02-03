@@ -26,7 +26,9 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 ASANFLAGS := -fsanitize=address -fno-omit-frame-pointer
 CPPFLAGS  := $(INC_FLAGS) -MMD -MP -Wall -Wextra -g -O0 $(ASANFLAGS)
-LDFLAGS   := -lm -lreadline $(ASANFLAGS)
+LDFLAGS   := -g -lm -lreadline $(ASANFLAGS)
+
+default: run
 
 # The final build step.
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
