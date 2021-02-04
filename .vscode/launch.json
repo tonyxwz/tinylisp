@@ -8,10 +8,10 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug (lldb)",
-      "program": "${workspaceFolder}/build/tl",
+      "program": "${workspaceFolder}/build/debug/tl",
       "args": [],
       "cwd": "${workspaceFolder}",
-      "preLaunchTask": "make"
+      "preLaunchTask": "make debug"
     }
   ]
 }

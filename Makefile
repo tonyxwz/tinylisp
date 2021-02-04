@@ -2,7 +2,7 @@
 TARGET_EXEC := tl 
 # compiler
 # ========
-CC := clang -std=c17
+CC  := clang -std=c17
 CXX := clang++ -std=c++17
 
 # Source file
@@ -28,11 +28,11 @@ BUILD_PREFIX := ./build
 
 ifeq ($(BUILD), RELEASE)
 	BUILD_DIR := $(BUILD_PREFIX)/release
-	CPPFLAGS += -g -O3
+	CPPFLAGS  += -g -O3
 else
 	BUILD_DIR := $(BUILD_PREFIX)/debug
-	CPPFLAGS += -g -O0 $(ASANFLAGS) -DDEBUG -D_DEBUG
-	LDFLAGS += -g -O0 -lm -lreadline $(ASANFLAGS)
+	CPPFLAGS  += -g -O0 $(ASANFLAGS) -DDEBUG -D_DEBUG
+	LDFLAGS   += -g -O0 -lm -lreadline $(ASANFLAGS)
 endif
 
 # String substitution for every C/C++ file.
@@ -49,12 +49,12 @@ $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
 	$(CC) $(OBJS) -o $@ $(LDFLAGS) $(LIBS)
 
 # Build step for C source
-$(BUILD_DIR)/%.c.o: %.c Makefile
+$(BUILD_DIR)/%.c.o: %.c
 	mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 # Build step for C++ source
-$(BUILD_DIR)/%.cpp.o: %.cpp Makefile
+$(BUILD_DIR)/%.cpp.o: %.cpp
 	mkdir -p $(dir $@)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 

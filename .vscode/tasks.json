@@ -4,9 +4,9 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "make",
+      "label": "make debug",
       "type": "shell",
-      "detail": "make current project",
+      "detail": "Built current project with GNU Make",
       "presentation": {
         "echo": true,
         "reveal": "silent",
@@ -15,7 +15,7 @@
         "showReuseMessage": false,
         "clear": false
       },
-      "command": "make",
+      "command": "make BUILD=DEBUG",
       "options": {
         "cwd": "${workspaceFolder}"
       },
