@@ -14,7 +14,7 @@ extern "C"
 #include <stdbool.h>
 
 #include "mpc.h"
-// TODO Define more functions
+// TODO Improve macros
 // ASSERT_OR_CLEAN ...->##__VA_ARGS__
 #define LASSERT(args, cond, emsg, ...)                                         \
   if (!(cond)) {                                                               \

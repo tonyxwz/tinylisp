@@ -166,7 +166,7 @@ lobj_copy(lobj* v)
       } else {
         x->formals = lobj_copy(v->formals);
         x->body = lobj_copy(v->body);
-        x->env = lenv_copy(v->env); // TODO
+        x->env = lenv_copy(v->env);
       }
       break;
     default:
@@ -357,16 +357,64 @@ lobj_typename(lobj_type t)
   }
 }
 
+
 lobj*
 lobj_call(lobj* f, lobj* args, lenv* env)
 {
   if (f->builtin) {
     return f->builtin(env, args);
   }
-  for (int i = 0; i < args->count; ++i) {
-    lenv_create(f->env, f->formals->cell[i], args->cell[i]);
+  int asked = f->formals->count;
+  int given = args->count;
+  while (args->count) {
+    if (f->formals->count == 0) {
+      lobj_del(args);
+      return lobj_err(
+        "too many args given, expecting %d, got %d", asked, given);
+    }
+    lobj* sym = lobj_pop(f->formals, 0);
+
+    // allow variable argument number
+    if (strcmp(sym->sym, "&") == 0) {
+      if (f->formals->count != 1) {
+        lobj_del(args); // TODO: move this checking to defining lambda
+        lobj_del(sym);
+        return lobj_err(
+          "Invalid function, '&' should be followed by one single symbol");
+      } else {
+        lobj* nsym = lobj_pop(f->formals, 0);
+        lenv_create(f->env, nsym, builtin_list(env, args));
+        lobj_del(sym);
+        lobj_del(nsym);
+        break;
+      }
+    }
+    lobj* val = lobj_pop(args, 0);
+    lenv_create(f->env, sym, val);
+    lobj_del(sym);
+    lobj_del(val);
   }
   lobj_del(args);
-  f->env->par = env;
-  return builtin_eval(f->env, lobj_append(lobj_sexpr(), lobj_copy(f->body)));
+  // since args after & is optional,
+  if (f->formals->count && strcmp(f->formals->cell[0]->sym, "&") == 0) {
+    if (f->formals->count != 2) {
+      return lobj_err(
+        "Invalid function, '&' should be followed by one single symbol");
+    }
+    lobj_del(lobj_pop(f->formals, 0)); // delete '&' symbol
+    lobj* va_sym = lobj_pop(f->formals, 0);
+    lobj* val = lobj_qexpr();
+    lenv_create(f->env, va_sym, val);
+    lobj_del(va_sym);
+    lobj_del(val);
+  }
+  if (f->formals->count) {
+    // still remaining args
+    return lobj_copy(f);
+  } else {
+    f->env->par = env;
+    return builtin_eval( // `builtin_eval` evals q-expr
+      f->env,
+      lobj_append(lobj_sexpr(), lobj_copy(f->body)));
+  }
 }

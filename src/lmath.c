@@ -192,7 +192,7 @@ builtin_exp(lenv* e, lobj* v)
   return unary_op_(e, v, exp, "exp");
 }
 lobj*
-builtin_log(lenv* e, lobj* v)
+builtin_ln(lenv* e, lobj* v)
 {
-  return unary_op_(e, v, log, "log");
+  return unary_op_(e, v, log, "ln");
 }

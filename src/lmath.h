@@ -23,7 +23,7 @@ extern "C"
 
   // unary
   lobj* builtin_exp(lenv* e, lobj* v);
-  lobj* builtin_log(lenv* e, lobj* v);
+  lobj* builtin_ln(lenv* e, lobj* v);
 
 #ifdef __cplusplus
 } // extern "C"

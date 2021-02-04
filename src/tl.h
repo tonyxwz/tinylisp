@@ -16,6 +16,7 @@ extern "C"
   // evaluate
   lobj* eval(lenv* e, lobj* v);
   lobj* eval_sexpr(lenv* env, lobj* v);
+  void print_ast();
   // lobj* builtin(lobj* v, const char* sym);
 
   void init_env(lenv* e);

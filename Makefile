@@ -44,7 +44,7 @@ $(BUILD_DIR)/%.cpp.o: %.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 
-.PHONY: clean run
+.PHONY: clean run debug
 clean:
 	rm -r $(BUILD_DIR)
 

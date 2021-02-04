@@ -9,7 +9,6 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 
-#include "lenv.h"
 #include "lobj.h"
 #include "tl.h"
 
@@ -49,7 +48,6 @@ repl()
   puts("Tony's Lisp (tl) version 0.1-dev");
   puts("Press Ctrl+C to exit");
 
-  // TODO
   lenv* env = lenv_new();
   init_env(env);
 
@@ -80,13 +78,23 @@ repl()
   return 0;
 }
 
+/* The design of the parser guarantees that any input is read as sexpr at the
+ * ast root node.
+ * >>> mod
+ * ast: (mod)
+ *  eval "(mod)"
+ *    eval_sexpr "(mod)"
+ *      eval "mod" -> read from environment "mod" which is a function
+ *
+ *
+
+ */
 lobj*
 eval(lenv* env, lobj* v)
 {
   if (v->type == LOBJ_SYM) {
     lobj* x = lenv_read(env, v);
     lobj_del(v);
-    // func with 0 args
     return x;
   } else if (v->type == LOBJ_SEXPR)
     return eval_sexpr(env, v);
@@ -102,26 +110,25 @@ eval(lenv* env, lobj* v)
 lobj*
 eval_sexpr(lenv* env, lobj* v)
 {
-  // evaluate all the childrens, call eval here recusively
   for (int i = 0; i < v->count; ++i) {
     v->cell[i] = eval(env, v->cell[i]);
   }
-  // error handling, TODO move to above for loop
+  // error handling, TODO move to above for loop?
   for (int i = 0; i < v->count; ++i) {
     if (v->cell[i]->type == LOBJ_ERR)
       return lobj_take(v, i);
   }
   if (v->count == 0) // empty expression ()
     return v;
-  if (v->count == 1) // empty expression (5)
+  if (v->count == 1) // literal (5) TODO allow or not?
   {
-    lobj* x = lobj_take(v, 0);
+    lobj* x = lobj_pop(v, 0);
     if (x->type == LOBJ_FUNC) {
-      lobj* x2 = lobj_call(x, lobj_sexpr(), env);
-      // x->func(env, lobj_sexpr());
+      lobj* x2 = lobj_call(x, v, env);
       lobj_del(x);
       return x2;
     } else {
+      lobj_del(v);
       return x;
     }
   }
@@ -129,11 +136,15 @@ eval_sexpr(lenv* env, lobj* v)
   // operator/symbol is the first cell of sexpr
   lobj* f = lobj_pop(v, 0);
   if (f->type != LOBJ_FUNC) {
+    lobj* err =
+      lobj_err("S-expression starts with incorrect type, expecting %s, got %s",
+               lobj_typename(LOBJ_FUNC),
+               lobj_typename(f->type));
     lobj_del(v);
     lobj_del(f);
-    return lobj_err("first element of qexpr must be a function");
+    return err;
   }
-  // v contains argument to f
+  // v contains argument to f, after poping f out
   lobj* result = lobj_call(f, v, env);
   lobj_del(f);
   return result;
@@ -148,6 +159,7 @@ init_env(lenv* e)
   lenv_swallow(e, lobj_sym("echo"), lobj_func(builtin_echo));
   lenv_swallow(e, lobj_sym("del"), lobj_func(builtin_del));
   lenv_swallow(e, lobj_sym("\\"), lobj_func(builtin_lambda));
+  lenv_swallow(e, lobj_sym("lambda"), lobj_func(builtin_lambda));
 
   lenv_swallow(e, lobj_sym("list"), lobj_func(builtin_list));
   lenv_swallow(e, lobj_sym("head"), lobj_func(builtin_head));
@@ -168,7 +180,7 @@ init_env(lenv* e)
   lenv_swallow(e, lobj_sym("mod"), lobj_func(builtin_mod));
   lenv_swallow(e, lobj_sym("exp"), lobj_func(builtin_exp));
   lenv_swallow(e, lobj_sym("pow"), lobj_func(builtin_pow));
-  lenv_swallow(e, lobj_sym("log"), lobj_func(builtin_log));
+  lenv_swallow(e, lobj_sym("ln"), lobj_func(builtin_ln));
 }
 
 lobj*
@@ -183,7 +195,7 @@ builtin_var(lenv* env, lobj* a, char* operator)
   for (int i = 0; i < syms->count; ++i) {
     LASSERT(a,
             syms->cell[i]->type == LOBJ_SYM,
-            "<function %s>can only bind to %s, got %s",
+            "<function %s> can only bind to %s, got %s",
             operator,
             lobj_typename(LOBJ_SYM),
             lobj_typename(syms->cell[i]->type));
@@ -280,6 +292,7 @@ builtin_lambda(lenv* env, lobj* a)
             lobj_typename(LOBJ_SYM),
             lobj_typename(a->cell[0]->cell[i]->type));
   }
+  // TODO support recursion
   lobj* formals = lobj_pop(a, 0);
   lobj* body = lobj_pop(a, 0);
   lobj* lambda = lobj_lambda(formals, body);
