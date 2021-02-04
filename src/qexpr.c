@@ -20,9 +20,7 @@ check_args_(lobj* v, const char* fname)
 lobj*
 builtin_head(lenv* e, lobj* v)
 {
-  lobj* err = check_args_(v, "head");
-  if (err)
-    return err;
+  LASSERT_ARGC("head", v, 1);
 
   lobj* head = lobj_take(v, 0);
   while (head->count > 1)
@@ -95,4 +93,14 @@ builtin_join(lenv* e, lobj* v)
   }
   lobj_del(v);
   return x;
+}
+
+lobj*
+builtin_len(lenv* env, lobj* a)
+{
+  LASSERT_ARGC("len", a, 1);
+  LASSERT_TYPE_I("len", a, 0, LOBJ_QEXPR);
+  lobj* len = lobj_int(a->cell[0]->count);
+  lobj_del(a);
+  return len;
 }

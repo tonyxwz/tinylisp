@@ -26,6 +26,8 @@ extern "C"
   lobj* builtin_del(lenv* env, lobj* a);
   lobj* builtin_echo(lenv* env, lobj* a);
   lobj* builtin_lambda(lenv* env, lobj* a);
+  lobj* builtin_fn(lenv* env, lobj* a);
+  lobj* builtin_if(lenv* env, lobj* a);
 
 #ifdef __cplusplus
 } // extern "C"

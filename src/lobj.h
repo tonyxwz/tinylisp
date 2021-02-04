@@ -25,7 +25,7 @@ extern "C"
 #define LASSERT_ARGC(fname, args, expect)                                      \
   LASSERT(args,                                                                \
           args->count == expect,                                               \
-          "<function %s> wrong number of cells, expecting %d, got %d",         \
+          "<function %s> wrong number of arguments, expecting %d, got %d",         \
           fname,                                                               \
           expect,                                                              \
           args->count);
@@ -51,7 +51,8 @@ extern "C"
   typedef enum
   {
     LOBJ_ERR,
-    LOBJ_NUM,
+    LOBJ_DOUBLE,
+    LOBJ_INT,
     LOBJ_SYM,
     LOBJ_SEXPR,
     LOBJ_QEXPR,
@@ -69,7 +70,8 @@ extern "C"
   {
     lobj_type type;
     // number
-    double num;
+    double d;
+    int i;
     bool constant;
     // error message
     char* err;
@@ -89,7 +91,8 @@ extern "C"
   };
 
   // ctor dtor
-  lobj* lobj_num(double x);
+  lobj* lobj_double(double x);
+  lobj* lobj_int(int x);
   lobj* lobj_err(char* fmt, ...);
   lobj* lobj_sym(char* psym);
   lobj* lobj_sexpr(void);

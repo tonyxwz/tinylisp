@@ -1,5 +1,5 @@
-#ifndef _LISP_FUNC_H_
-#define _LISP_FUNC_H_
+#ifndef _LMATH_H_
+#define _LMATH_H_
 
 #ifdef __cplusplus
 extern "C"
@@ -28,4 +28,4 @@ extern "C"
 #ifdef __cplusplus
 } // extern "C"
 #endif
-#endif // define _LISP_FUNC_H_
+#endif // define _LMATH_H_

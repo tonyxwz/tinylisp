@@ -10,7 +10,8 @@ lobj*
 lobj_common_init()
 {
   lobj* v = (lobj*)malloc(sizeof(lobj));
-  v->num = 0;
+  v->i = 0;
+  v->d = 0;
   v->constant = false;
   v->err = NULL;
   v->sym = NULL;
@@ -24,14 +25,22 @@ lobj_common_init()
 }
 
 lobj*
-lobj_num(double x)
+lobj_double(double x)
 {
   lobj* v = lobj_common_init();
-  v->type = LOBJ_NUM;
-  v->num = x;
+  v->type = LOBJ_DOUBLE;
+  v->d = x;
   return v;
 }
 
+lobj*
+lobj_int(int x)
+{
+  lobj* v = lobj_common_init();
+  v->type = LOBJ_INT;
+  v->i = x;
+  return v;
+}
 lobj*
 lobj_err(char* fmt, ...)
 {
@@ -107,7 +116,8 @@ lobj_del(lobj* v)
 {
   // printf("deleted %d\n", v->type);
   switch (v->type) {
-    case LOBJ_NUM:
+    case LOBJ_DOUBLE:
+    case LOBJ_INT:
       break;
     case LOBJ_ERR:
       free(v->err);
@@ -146,8 +156,11 @@ lobj_copy(lobj* v)
       x->err = malloc(strlen(v->err) + 1);
       strcpy(x->err, v->err);
       break;
-    case LOBJ_NUM:
-      x->num = v->num;
+    case LOBJ_DOUBLE:
+      x->d = v->d;
+      break;
+    case LOBJ_INT:
+      x->i = v->i;
       break;
     case LOBJ_SYM:
       x->sym = malloc(strlen(v->sym) + 1);
@@ -186,8 +199,11 @@ lobj_move(lobj* v)
       x->err = v->err;
       v->err = NULL;
       break;
-    case LOBJ_NUM:
-      x->num = v->num;
+    case LOBJ_DOUBLE:
+      x->d = v->d;
+      break;
+    case LOBJ_INT:
+      x->i = v->i;
       break;
     case LOBJ_SYM:
       x->sym = v->sym;
@@ -212,11 +228,11 @@ lobj_move(lobj* v)
 
 // pop and delete original
 lobj*
-lobj_take(lobj* sexpr, int i)
+lobj_take(lobj* expr, int i)
 {
   // TODO no need to shift if cells are disgarded very soon
-  lobj* pop = lobj_pop(sexpr, i);
-  lobj_del(sexpr);
+  lobj* pop = lobj_pop(expr, i);
+  lobj_del(expr);
   return pop;
 }
 
@@ -240,7 +256,7 @@ lobj_read_num(const mpc_ast_t* ast)
   errno = 0;
   double x = strtod(ast->contents, NULL);
   if (errno == 0)
-    return lobj_num(x);
+    return lobj_double(x);
   else
     return lobj_err("invalid number");
 }
@@ -249,11 +265,12 @@ lobj_read_num(const mpc_ast_t* ast)
 lobj*
 lobj_read(const mpc_ast_t* ast)
 {
-  if (strstr(ast->tag, "number"))
+  if (strstr(ast->tag, "double"))
     return lobj_read_num(ast);
+  if (strstr(ast->tag, "integer"))
+    return lobj_int(atoi(ast->contents));
   if (strstr(ast->tag, "symbol"))
     return lobj_sym(ast->contents);
-
   lobj* x = NULL;
   if (strcmp(ast->tag, ">") == 0 || // root node (everything is expr first)
       strstr(ast->tag, "sexpr"))    // sexpr
@@ -301,8 +318,11 @@ lobj_print(lobj* v)
     case LOBJ_ERR:
       printf("Error: %s", v->err);
       break;
-    case LOBJ_NUM:
-      printf("%f", v->num);
+    case LOBJ_DOUBLE:
+      printf("%f", v->d);
+      break;
+    case LOBJ_INT:
+      printf("%d", v->i);
       break;
     case LOBJ_SYM:
       printf("%s", v->sym);
@@ -340,8 +360,10 @@ char*
 lobj_typename(lobj_type t)
 {
   switch (t) {
-    case LOBJ_NUM:
-      return "Number";
+    case LOBJ_DOUBLE:
+      return "Double";
+    case LOBJ_INT:
+      return "Integer";
     case LOBJ_ERR:
       return "Error";
     case LOBJ_SYM:
@@ -356,7 +378,6 @@ lobj_typename(lobj_type t)
       return "Unknown";
   }
 }
-
 
 lobj*
 lobj_call(lobj* f, lobj* args, lenv* env)

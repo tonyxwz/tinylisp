@@ -90,6 +90,12 @@ lenv_swallow(lenv* env, lobj* k, lobj* v)
   lobj_del(v);
 }
 
+// void
+// lenv_add_builtin(lenv* env, const char* name, lbuiltinFunc func)
+// {
+
+// }
+
 lobj*
 lenv_read(lenv* env, lobj* k)
 {

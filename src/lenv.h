@@ -27,6 +27,7 @@ extern "C"
   void lenv_create(lenv* env, lobj* k, lobj* v);
   void lenv_global_create(lenv* e, lobj* k, lobj* v);
   void lenv_swallow(lenv* env, lobj* k, lobj* v);
+  void lenv_add_builtin(lenv* env, const char* sym, lbuiltinFunc* f);
 
   // read
   lobj* lenv_read(lenv* env, lobj* k);

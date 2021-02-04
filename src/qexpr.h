@@ -17,13 +17,16 @@ extern "C"
   lobj* builtin_tail(lenv* e, lobj* v);
 
   // 1 2 3 -> {1 2 3}
-  lobj* builtin_list(lenv*e, lobj* v);
+  lobj* builtin_list(lenv* e, lobj* v);
 
   // {1}{2}{3} -> {1 2 3}
-  lobj* builtin_join(lenv*e, lobj* v);
+  lobj* builtin_join(lenv* e, lobj* v);
 
   // qexpr -> num
   lobj* builtin_eval(lenv* e, lobj* v);
+
+  // qexpr -> length
+  lobj* builtin_len(lenv* env, lobj* a);
 
 #ifdef __cplusplus
 } // extern "C"

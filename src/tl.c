@@ -9,13 +9,21 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 
+#include "lenv.h"
 #include "lobj.h"
 #include "tl.h"
 
 int
+main(int argc, char** argv)
+{
+  return repl();
+}
+
+int
 repl()
 {
-  mpc_parser_t* Number = mpc_new("number");
+  mpc_parser_t* Integer = mpc_new("integer");
+  mpc_parser_t* Double = mpc_new("double");
   mpc_parser_t* Symbol = mpc_new("symbol");
   mpc_parser_t* Sexpr = mpc_new("sexpr");
   mpc_parser_t* Qexpr = mpc_new("qexpr");
@@ -31,14 +39,16 @@ repl()
 
   mpca_lang(MPCA_LANG_DEFAULT,
             " \
-    number   : /(\\b|\\B)-?([0-9]*\\.)?[0-9]+(\\B|\\b)/ ; \
+    integer  : /[0-9]+/ ; \
+    double   : /(\\b|\\B)-?([0-9]*)?\\.[0-9]+(\\B|\\b)/ ; \
     symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ; \
     sexpr: '(' <expr>* ')' ;\
     qexpr: '{' <expr>* '}'; \
-    expr     : <number> | <symbol> | <sexpr> | <qexpr> ; \
+    expr     : <double> | <integer> | <symbol> | <sexpr> | <qexpr> ; \
     tl       : /^/ <expr>* /$/; \
   ",
-            Number,
+            Double,
+            Integer,
             Symbol,
             Sexpr,
             Qexpr,
@@ -74,7 +84,7 @@ repl()
   }
 
   lenv_del(env);
-  mpc_cleanup(6, Number, Symbol, Sexpr, Qexpr, Expr, TL);
+  mpc_cleanup(7, Double, Integer, Symbol, Sexpr, Qexpr, Expr, TL);
   return 0;
 }
 
@@ -85,9 +95,6 @@ repl()
  *  eval "(mod)"
  *    eval_sexpr "(mod)"
  *      eval "mod" -> read from environment "mod" which is a function
- *
- *
-
  */
 lobj*
 eval(lenv* env, lobj* v)
@@ -120,7 +127,7 @@ eval_sexpr(lenv* env, lobj* v)
   }
   if (v->count == 0) // empty expression ()
     return v;
-  if (v->count == 1) // literal (5) TODO allow or not?
+  if (v->count == 1) // echo literals (5) TODO allow or not?
   {
     lobj* x = lobj_pop(v, 0);
     if (x->type == LOBJ_FUNC) {
@@ -160,12 +167,14 @@ init_env(lenv* e)
   lenv_swallow(e, lobj_sym("del"), lobj_func(builtin_del));
   lenv_swallow(e, lobj_sym("\\"), lobj_func(builtin_lambda));
   lenv_swallow(e, lobj_sym("lambda"), lobj_func(builtin_lambda));
+  lenv_swallow(e, lobj_sym("fn"), lobj_func(builtin_fn));
 
   lenv_swallow(e, lobj_sym("list"), lobj_func(builtin_list));
   lenv_swallow(e, lobj_sym("head"), lobj_func(builtin_head));
   lenv_swallow(e, lobj_sym("tail"), lobj_func(builtin_tail));
   lenv_swallow(e, lobj_sym("join"), lobj_func(builtin_join));
   lenv_swallow(e, lobj_sym("eval"), lobj_func(builtin_eval));
+  lenv_swallow(e, lobj_sym("len"), lobj_func(builtin_len));
 
   lenv_swallow(e, lobj_sym("add"), lobj_func(builtin_add));
   lenv_swallow(e, lobj_sym("+"), lobj_func(builtin_add));
@@ -300,8 +309,26 @@ builtin_lambda(lenv* env, lobj* a)
   return lambda;
 }
 
-int
-main(int argc, char** argv)
+lobj*
+builtin_fn(lenv* env, lobj* a)
 {
-  return repl();
+  LASSERT_ARGC("fn", a, 2);
+  LASSERT_TYPE_I("fn", a, 0, LOBJ_QEXPR);
+  LASSERT_TYPE_I("fn", a, 1, LOBJ_QEXPR);
+  LASSERT(a,
+          a->cell[0]->count > 0,
+          "<function fn> requires at least one arg as function name");
+  lobj* fname = lobj_append(lobj_qexpr(), lobj_pop(a->cell[0], 0));
+  lobj* fun = builtin_lambda(env, a); // a is freed
+
+  lobj* tmp = lobj_qexpr();
+  lobj_append(tmp, fname);
+  lobj_append(tmp, fun); // fname & fun moved to tmp
+
+  return builtin_def(env, tmp); // tmp is freed
 }
+// lobj*
+// builtin_if(lenv* env, lobj* a)
+// {
+  
+// }
