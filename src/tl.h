@@ -5,7 +5,6 @@ extern "C"
 {
 #endif
 
-
 #include "mpc.h"
 #include "lobj.h"
 #include "lenv.h"
@@ -43,6 +42,9 @@ extern "C"
   lobj* builtin_dir(lenv* env, lobj* a);
   lobj* builtin_del(lenv* env, lobj* a);
   lobj* builtin_echo(lenv* env, lobj* a);
+  lobj* builtin_error(lenv* env, lobj* a);
+  lobj* builtin_load(lenv* env, lobj* a);
+
   lobj* builtin_lambda(lenv* env, lobj* a);
   lobj* builtin_fn(lenv* env, lobj* a);
   lobj* builtin_if(lenv* env, lobj* a);

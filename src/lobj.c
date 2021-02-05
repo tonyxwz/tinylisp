@@ -1,5 +1,6 @@
 #include "lobj.h"
 #include "lenv.h"
+#include "mpc.h"
 #include "qexpr.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +16,7 @@ lobj_common_init()
   v->constant = false;
   v->err = NULL;
   v->sym = NULL;
+  v->str = NULL;
   v->env = NULL;
   v->builtin = NULL;
   v->formals = NULL;
@@ -66,6 +68,16 @@ lobj_sym(char* psym)
   v->type = LOBJ_SYM;
   v->sym = malloc(strlen(psym) + 1);
   strcpy(v->sym, psym);
+  return v;
+}
+
+lobj*
+lobj_str(char* str)
+{
+  lobj* v = lobj_common_init();
+  v->type = LOBJ_STR;
+  v->str = malloc(strlen(str) + 1);
+  strcpy(v->str, str);
   return v;
 }
 
@@ -125,6 +137,9 @@ lobj_del(lobj* v)
     case LOBJ_SYM:
       free(v->sym);
       break;
+    case LOBJ_STR:
+      free(v->str);
+      break;
     case LOBJ_SEXPR:
     case LOBJ_QEXPR:
       for (int i = 0; i < v->count; ++i)
@@ -163,6 +178,10 @@ lobj_copy(lobj* v)
       break;
     case LOBJ_SYM:
       x->sym = malloc(strlen(v->sym) + 1);
+      strcpy(x->sym, v->sym);
+      break;
+    case LOBJ_STR:
+      x->str = malloc(strlen(v->str) + 1);
       strcpy(x->sym, v->sym);
       break;
     case LOBJ_SEXPR:
@@ -249,7 +268,7 @@ lobj_pop(lobj* sexpr, int i)
 }
 
 lobj*
-lobj_read_num(const mpc_ast_t* ast)
+lobj_read_num(mpc_ast_t* ast)
 {
   errno = 0;
   double x = strtod(ast->contents, NULL);
@@ -259,9 +278,21 @@ lobj_read_num(const mpc_ast_t* ast)
     return lobj_err("invalid number");
 }
 
+lobj*
+lobj_read_str(mpc_ast_t* ast)
+{
+  ast->contents[strlen(ast->contents) - 1] = '\0';
+  char* unescaped = malloc(strlen(ast->contents + 1) + 1);
+  strcpy(unescaped, ast->contents + 1);
+  unescaped = mpcf_unescape(unescaped);
+  lobj* str = lobj_str(unescaped);
+  free(unescaped);
+  return str;
+}
+
 // regex paring is handled by mpc TODO
 lobj*
-lobj_read(const mpc_ast_t* ast)
+lobj_read(mpc_ast_t* ast)
 {
   if (strstr(ast->tag, "double"))
     return lobj_read_num(ast);
@@ -269,6 +300,8 @@ lobj_read(const mpc_ast_t* ast)
     return lobj_int(atoi(ast->contents));
   if (strstr(ast->tag, "symbol"))
     return lobj_sym(ast->contents);
+  if (strstr(ast->tag, "string"))
+    return lobj_read_str(ast);
   lobj* x = NULL;
   if (strcmp(ast->tag, ">") == 0 || // root node (everything is expr first)
       strstr(ast->tag, "sexpr"))    // sexpr
@@ -281,7 +314,8 @@ lobj_read(const mpc_ast_t* ast)
         strcmp(ast->children[i]->contents, ")") == 0 ||
         strcmp(ast->children[i]->contents, "{") == 0 || // qexpr branch
         strcmp(ast->children[i]->contents, "}") == 0 ||
-        strcmp(ast->children[i]->tag, "regex") == 0)
+        strcmp(ast->children[i]->tag, "regex") == 0  ||
+        strstr(ast->children[i]->tag, "comment"))
       continue;
     x = lobj_append(x, lobj_read(ast->children[i]));
   }
@@ -310,6 +344,16 @@ lobj_print_expr(lobj* v, char open, char close)
 }
 
 void
+lobj_print_str(lobj* v)
+{
+  char* escaped = malloc(strlen(v->str) + 1);
+  strcpy(escaped, v->str);
+  escaped = mpcf_escape(escaped);
+  printf("\"%s\"", escaped);
+  free(escaped);
+}
+
+void
 lobj_print(lobj* v)
 {
   switch (v->type) {
@@ -324,6 +368,9 @@ lobj_print(lobj* v)
       break;
     case LOBJ_SYM:
       printf("%s", v->sym);
+      break;
+    case LOBJ_STR:
+      lobj_print_str(v);
       break;
     case LOBJ_SEXPR:
       lobj_print_expr(v, '(', ')');
@@ -366,6 +413,8 @@ lobj_typename(lobj_type t)
       return "Error";
     case LOBJ_SYM:
       return "Symbol";
+    case LOBJ_STR:
+      return "String";
     case LOBJ_SEXPR:
       return "S-Expression";
     case LOBJ_QEXPR:
@@ -452,6 +501,8 @@ lobj_eq(lobj* a, lobj* b)
       return strcmp(a->sym, b->sym) == 0;
     case LOBJ_ERR:
       return strcmp(a->err, b->err) == 0;
+    case LOBJ_STR:
+      return strcmp(a->str, b->str) == 0;
     case LOBJ_FUNC:
       if (a->builtin && b->builtin) {
         return a->builtin == b->builtin;

@@ -1,3 +1,5 @@
+#define _XOPEN_SOURCE 500
+#include "mpc.h"
 #include "lenv.h"
 #include "lobj.h"
 #define __USE_MISC
@@ -14,6 +16,16 @@
 
 #include "tl.h"
 
+// mpc_parser_t* Integer;
+// mpc_parser_t* Double;
+// mpc_parser_t* Symbol;
+// mpc_parser_t* String;
+// mpc_parser_t* Comment;
+// mpc_parser_t* Sexpr;
+// mpc_parser_t* Qexpr;
+// mpc_parser_t* Expr;
+// global variable
+mpc_parser_t* TL;
 int
 main(int argc, char** argv)
 {
@@ -26,31 +38,31 @@ repl()
   mpc_parser_t* Integer = mpc_new("integer");
   mpc_parser_t* Double = mpc_new("double");
   mpc_parser_t* Symbol = mpc_new("symbol");
+  mpc_parser_t* String = mpc_new("string");
+  mpc_parser_t* Comment = mpc_new("comment");
   mpc_parser_t* Sexpr = mpc_new("sexpr");
   mpc_parser_t* Qexpr = mpc_new("qexpr");
   mpc_parser_t* Expr = mpc_new("expr");
-  mpc_parser_t* TL = mpc_new("tl");
-
-  // symbol: '+' | '-' | '*' | '/' | '%' | '^' | \
-    //     \"add\" | \"sub\" | \"mul\" | \"div\" | \"mod\" | \
-    //     \"exp\" | \"log\" | \"pow\" | \
-    //     \"min\" | \"max\" | \
-    //     \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\"; \
-    //
+  TL = mpc_new("tl");
 
   mpca_lang(MPCA_LANG_DEFAULT,
             " \
-    integer  : /[0-9]+/ ; \
-    double   : /(\\b|\\B)-?([0-9]*)?\\.[0-9]+(\\B|\\b)/ ; \
-    symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&%\\^\\|]+/ ; \
-    sexpr: '(' <expr>* ')' ;\
-    qexpr: '{' <expr>* '}'; \
-    expr     : <double> | <integer> | <symbol> | <sexpr> | <qexpr> ; \
-    tl       : /^/ <expr>* /$/; \
+    integer:  /[0-9]+/ ;                                   \
+    double:   /(\\b|\\B)-?([0-9]*)?\\.[0-9]+(\\B|\\b)/ ;   \
+    symbol:   /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&%\\^\\|]+/ ;    \
+    string:   /\"(\\\\.|[^\"])*\"/ ;                       \
+    comment:  /;[^\\r\\n]*/ ;                              \
+    sexpr:    '(' <expr>* ')' ;                            \
+    qexpr:    '{' <expr>* '}';                             \
+    expr:     <double> | <integer> | <symbol> | <string> | \
+              <comment> | <sexpr> | <qexpr> ;              \
+    tl:       /^/ <expr>* /$/;                             \
   ",
             Double,
             Integer,
             Symbol,
+            String,
+            Comment,
             Sexpr,
             Qexpr,
             Expr,
@@ -85,7 +97,8 @@ repl()
   }
 
   lenv_del(env);
-  mpc_cleanup(7, Double, Integer, Symbol, Sexpr, Qexpr, Expr, TL);
+  mpc_cleanup(
+    9, Double, Integer, Symbol, String, Comment, Sexpr, Qexpr, Expr, TL);
   return 0;
 }
 
@@ -128,18 +141,18 @@ eval_sexpr(lenv* env, lobj* v)
   }
   if (v->count == 0) // empty expression ()
     return v;
-  if (v->count == 1) // echo literals (5) TODO allow or not?
-  {
-    lobj* x = lobj_pop(v, 0);
-    if (x->type == LOBJ_FUNC) {
-      lobj* x2 = lobj_call(x, v, env);
-      lobj_del(x);
-      return x2;
-    } else {
-      lobj_del(v);
-      return x;
-    }
-  }
+  // if (v->count == 1) // echo literals (5) TODO allow or not?
+  // {
+  //   lobj* x = lobj_pop(v, 0);
+  //   if (x->type == LOBJ_FUNC) {
+  //     lobj* x2 = lobj_call(x, v, env);
+  //     lobj_del(x);
+  //     return x2;
+  //   } else {
+  //     lobj_del(v);
+  //     return x;
+  //   }
+  // }
 
   // operator/symbol is the first cell of sexpr
   lobj* f = lobj_pop(v, 0);
@@ -165,7 +178,10 @@ init_env(lenv* e)
   lenv_add_builtin(e, "=", builtin_assign);
   lenv_add_builtin(e, "dir", builtin_dir);
   lenv_add_builtin(e, "echo", builtin_echo);
+  lenv_add_builtin(e, "error", builtin_error);
   lenv_add_builtin(e, "del", builtin_del);
+  lenv_add_builtin(e, "load", builtin_load);
+
   lenv_add_builtin(e, "\\", builtin_lambda);
   lenv_add_builtin(e, "lambda", builtin_lambda);
   lenv_add_builtin(e, "fn", builtin_fn);
@@ -216,11 +232,14 @@ init_env(lenv* e)
   lenv_add_builtin(e, "lt", builtin_flt);
   lenv_add_builtin(e, "gt", builtin_fgt);
 
-  // symbols
-  // lenv_add_symbol(e, "PI", lobj_double(M_PI));
-  // lenv_add_symbol(e, "E", lobj_double(M_El));
+  // const symbols
+  lenv_add_symbol(e, "PI", lobj_double(M_PI));
+  lenv_add_symbol(e, "E", lobj_double(M_E));
   lenv_add_symbol(e, "true", lobj_int(1));
   lenv_add_symbol(e, "false", lobj_int(0));
+  for(int i = 0; i < e->count; ++i) {
+    e->objs[i]->constant = true;
+  }
 }
 
 lobj*
@@ -319,7 +338,53 @@ builtin_echo(lenv* env, lobj* a)
   // lobj_println(a);
   // lobj_del(a);
   // return lobj_sexpr();
-  return a;
+  for (int i = 0; i < a->count; ++i) {
+    lobj_print(a->cell[i]);
+    putchar(' ');
+  }
+  putchar('\n');
+  lobj_del(a);
+  return lobj_sexpr();
+}
+
+lobj*
+builtin_error(lenv* env, lobj* a)
+{
+  LASSERT_ARGC("error", a, 1);
+  LASSERT_TYPE_I("error", a, 0, LOBJ_STR);
+
+  lobj* err = lobj_err(a->cell[0]->str);
+  lobj_del(a);
+  return err;
+}
+
+lobj*
+builtin_load(lenv* env, lobj* a)
+{
+  LASSERT_ARGC("load", a, 1);
+  LASSERT_TYPE_I("load", a, 0, LOBJ_STR);
+
+  mpc_result_t r;
+  if (mpc_parse_contents(a->cell[0]->str, TL, &r)) {
+    lobj* expr = lobj_read(r.output);
+    mpc_ast_delete(r.output);
+    while (expr->count) {
+      lobj* x = eval(env, lobj_pop(expr, 0));
+      if (x->type == LOBJ_ERR)
+        lobj_println(x);
+      lobj_del(x);
+    }
+    lobj_del(expr);
+    lobj_del(a);
+    return lobj_sexpr();
+  } else {
+    char* err_msg = mpc_err_string(r.error);
+    mpc_err_delete(r.error);
+    lobj* err = lobj_err("Cannot find library, %s", err_msg);
+    lobj_del(a);
+    free(err_msg);
+    return err;
+  }
 }
 
 lobj*
@@ -451,7 +516,7 @@ builtin_div(lenv* env, lobj* a)
 lobj*
 builtin_mod(lenv* env, lobj* a)
 {
-  LASSERT_ARGC("arithmatic", a, 2);
+  LASSERT_ARGC("%", a, 2);
   for (int i = 0; i < a->count; ++i)
     LASSERT_TYPE_I("arithmatic", a, i, LOBJ_INT)
   lobj* ans = lobj_pop(a, 0);
@@ -486,7 +551,6 @@ builtin_ne(lenv* env, lobj* a)
   return builtin_cmp(env, a, "!=");
 }
 
-// TODO compare double
 lobj*
 builtin_ord(lenv* env, lobj* a, char* op)
 {

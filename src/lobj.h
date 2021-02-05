@@ -105,8 +105,9 @@ extern "C"
   lobj* lobj_move(lobj* v);
 
   // lexing and parsing
-  lobj* lobj_read_num(const mpc_ast_t* ast);
-  lobj* lobj_read(const mpc_ast_t* ast);
+  lobj* lobj_read_num(mpc_ast_t* ast);
+  lobj* lobj_read_str(mpc_ast_t* ast);
+  lobj* lobj_read(mpc_ast_t* ast);
   lobj* lobj_append(lobj*, lobj*);
   void lobj_print_expr(lobj* v, char open, char close);
   void lobj_print(lobj* v);
