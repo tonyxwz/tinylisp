@@ -25,7 +25,7 @@ extern "C"
 #define LASSERT_ARGC(fname, args, expect)                                      \
   LASSERT(args,                                                                \
           args->count == expect,                                               \
-          "<function %s> wrong number of arguments, expecting %d, got %d",         \
+          "<function %s> wrong number of arguments, expecting %d, got %d",     \
           fname,                                                               \
           expect,                                                              \
           args->count);
@@ -59,9 +59,6 @@ extern "C"
     LOBJ_FUNC
   } lobj_type;
 
-  // lobj->lbuiltinFunc
-  // lbuiltinFunc -> lobj, lenv
-  // lenv -> lobj
   typedef struct lobj lobj;
   typedef struct lenv lenv;
   typedef lobj* (*lbuiltinFunc)(lenv*, lobj*);
@@ -105,7 +102,6 @@ extern "C"
   lobj* lobj_pop(lobj* sexpr, int i);
   lobj* lobj_copy(lobj* v);
   lobj* lobj_move(lobj* v);
-  
 
   // lexing and parsing
   lobj* lobj_read_num(const mpc_ast_t* ast);
@@ -117,6 +113,7 @@ extern "C"
   char* lobj_typename(lobj_type t);
 
   lobj* lobj_call(lobj* f, lobj* args, lenv* env);
+  int lobj_eq(lobj* a, lobj* b);
 
 #ifdef __cplusplus
 } // extern "C"

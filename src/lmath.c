@@ -11,7 +11,7 @@ check_args(lobj* v, const char* fname)
   return NULL; // OK
 }
 
-// recursive
+// recursive TODO use macros, add integer
 lobj*
 recursive_op_(lenv* e, lobj* v, double (*op)(double, double), const char* fname)
 {

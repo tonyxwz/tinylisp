@@ -82,19 +82,14 @@ lenv_global_create(lenv* e, lobj* k, lobj* v)
 }
 
 void
-lenv_swallow(lenv* env, lobj* k, lobj* v)
+lenv_add_builtin(lenv* env, char* sym, lbuiltinFunc f)
 {
-  // TODO use lobj_move
-  lenv_create(env, k, v);
-  lobj_del(k);
-  lobj_del(v);
+  lobj* key = lobj_sym(sym);
+  lobj* val = lobj_func(f);
+  lenv_create(env, key, val);
+  lobj_del(key);
+  lobj_del(val);
 }
-
-// void
-// lenv_add_builtin(lenv* env, const char* name, lbuiltinFunc func)
-// {
-
-// }
 
 lobj*
 lenv_read(lenv* env, lobj* k)

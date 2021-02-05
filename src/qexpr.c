@@ -78,14 +78,7 @@ lobj*
 builtin_join(lenv* e, lobj* v)
 {
   for (int i = 0; i < v->count; ++i) {
-    LASSERT(
-      v,
-      v->cell[0]->type == LOBJ_QEXPR,
-      "<function %s> got wrong type for argument %d, expecting %s, got %s",
-      "join",
-      i + 1,
-      lobj_typename(LOBJ_QEXPR),
-      lobj_typename(v->cell[0]->type));
+    LASSERT_TYPE_I("join", v, i, LOBJ_QEXPR);
   }
   lobj* x = lobj_pop(v, 0);
   while (v->count) {

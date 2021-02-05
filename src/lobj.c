@@ -439,3 +439,41 @@ lobj_call(lobj* f, lobj* args, lenv* env)
       lobj_append(lobj_sexpr(), lobj_copy(f->body)));
   }
 }
+
+int
+lobj_eq(lobj* a, lobj* b)
+{
+  if (a->type != b->type)
+    return 0;
+  switch (a->type) {
+    case LOBJ_INT:
+      return a->i == b->i;
+    case LOBJ_DOUBLE: // TODO use epsilon
+      return a->d == b->d;
+    case LOBJ_SYM:
+      return strcmp(a->sym, b->sym) == 0;
+    case LOBJ_ERR:
+      return strcmp(a->err, b->err) == 0;
+    case LOBJ_FUNC:
+      if (a->builtin && b->builtin) {
+        return a->builtin == b->builtin;
+      } else {
+        // compare env ???
+        return (lobj_eq(a->formals, b->formals) && lobj_eq(a->body, b->body));
+      }
+    case LOBJ_QEXPR:
+    case LOBJ_SEXPR:
+      if (a->count != b->count)
+        return 0;
+      else {
+        for (int i = 0; i < a->count; ++i) {
+          if (!lobj_eq(a->cell[i], b->cell[i]))
+            return 0;
+        }
+        return 1;
+      }
+    default:
+      break;
+  }
+  return 0;
+}

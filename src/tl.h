@@ -11,6 +11,15 @@ extern "C"
 #include "lmath.h"
 #include "sexpr.h"
 #include "qexpr.h"
+  typedef enum
+  {
+    OP_EQ,
+    OP_NE,
+    OP_LT,
+    OP_LE,
+    OP_GT,
+    OP_GE
+  } order_op;
 
   int repl();
   // evaluate
@@ -28,6 +37,16 @@ extern "C"
   lobj* builtin_lambda(lenv* env, lobj* a);
   lobj* builtin_fn(lenv* env, lobj* a);
   lobj* builtin_if(lenv* env, lobj* a);
+
+  lobj* builtin_cmp(lenv* env, lobj* a, char* op);
+  lobj* builtin_eq(lenv* env, lobj* a);
+  lobj* builtin_ne(lenv* env, lobj* a);
+
+  lobj* builtin_ord(lenv* env, lobj* a, char* op);
+  lobj* builtin_lt(lenv* env, lobj* a);
+  lobj* builtin_le(lenv* env, lobj* a);
+  lobj* builtin_gt(lenv* env, lobj* a);
+  lobj* builtin_ge(lenv* env, lobj* a);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -11,6 +11,7 @@
 
 #include "lenv.h"
 #include "lobj.h"
+#include "qexpr.h"
 #include "tl.h"
 
 int
@@ -70,7 +71,7 @@ repl()
     add_history(input);
     mpc_result_t r;
     if (mpc_parse("<stdin>", input, TL, &r)) {
-      mpc_ast_print(r.output);
+      // mpc_ast_print(r.output);
       lobj* tmp = eval(env, lobj_read(r.output));
       lobj_println(tmp);
       lobj_del(tmp);
@@ -160,36 +161,45 @@ eval_sexpr(lenv* env, lobj* v)
 void
 init_env(lenv* e)
 {
-  lenv_swallow(e, lobj_sym("def"), lobj_func(builtin_def));
-  lenv_swallow(e, lobj_sym("="), lobj_func(builtin_assign));
-  lenv_swallow(e, lobj_sym("dir"), lobj_func(builtin_dir));
-  lenv_swallow(e, lobj_sym("echo"), lobj_func(builtin_echo));
-  lenv_swallow(e, lobj_sym("del"), lobj_func(builtin_del));
-  lenv_swallow(e, lobj_sym("\\"), lobj_func(builtin_lambda));
-  lenv_swallow(e, lobj_sym("lambda"), lobj_func(builtin_lambda));
-  lenv_swallow(e, lobj_sym("fn"), lobj_func(builtin_fn));
+  lenv_add_builtin(e, "def", builtin_def);
+  lenv_add_builtin(e, "=", builtin_assign);
+  lenv_add_builtin(e, "dir", builtin_dir);
+  lenv_add_builtin(e, "echo", builtin_echo);
+  lenv_add_builtin(e, "del", builtin_del);
+  lenv_add_builtin(e, "\\", builtin_lambda);
+  lenv_add_builtin(e, "lambda", builtin_lambda);
+  lenv_add_builtin(e, "fn", builtin_fn);
+  lenv_add_builtin(e, "if", builtin_if);
 
-  lenv_swallow(e, lobj_sym("list"), lobj_func(builtin_list));
-  lenv_swallow(e, lobj_sym("head"), lobj_func(builtin_head));
-  lenv_swallow(e, lobj_sym("tail"), lobj_func(builtin_tail));
-  lenv_swallow(e, lobj_sym("join"), lobj_func(builtin_join));
-  lenv_swallow(e, lobj_sym("eval"), lobj_func(builtin_eval));
-  lenv_swallow(e, lobj_sym("len"), lobj_func(builtin_len));
+  lenv_add_builtin(e, "==", builtin_eq);
+  lenv_add_builtin(e, "!=", builtin_ne);
 
-  lenv_swallow(e, lobj_sym("add"), lobj_func(builtin_add));
-  lenv_swallow(e, lobj_sym("+"), lobj_func(builtin_add));
-  lenv_swallow(e, lobj_sym("sub"), lobj_func(builtin_sub));
-  lenv_swallow(e, lobj_sym("-"), lobj_func(builtin_sub));
-  lenv_swallow(e, lobj_sym("mul"), lobj_func(builtin_mul));
-  lenv_swallow(e, lobj_sym("*"), lobj_func(builtin_mul));
-  lenv_swallow(e, lobj_sym("div"), lobj_func(builtin_div));
-  lenv_swallow(e, lobj_sym("/"), lobj_func(builtin_div));
-  lenv_swallow(e, lobj_sym("min"), lobj_func(builtin_min));
-  lenv_swallow(e, lobj_sym("max"), lobj_func(builtin_max));
-  lenv_swallow(e, lobj_sym("mod"), lobj_func(builtin_mod));
-  lenv_swallow(e, lobj_sym("exp"), lobj_func(builtin_exp));
-  lenv_swallow(e, lobj_sym("pow"), lobj_func(builtin_pow));
-  lenv_swallow(e, lobj_sym("ln"), lobj_func(builtin_ln));
+  lenv_add_builtin(e, "<", builtin_lt);
+  lenv_add_builtin(e, ">", builtin_gt);
+  lenv_add_builtin(e, "<=", builtin_le);
+  lenv_add_builtin(e, ">=", builtin_ge);
+
+  lenv_add_builtin(e, "list", builtin_list);
+  lenv_add_builtin(e, "head", builtin_head);
+  lenv_add_builtin(e, "tail", builtin_tail);
+  lenv_add_builtin(e, "join", builtin_join);
+  lenv_add_builtin(e, "eval", builtin_eval);
+  lenv_add_builtin(e, "len", builtin_len);
+
+  lenv_add_builtin(e, "add", builtin_add);
+  lenv_add_builtin(e, "+", builtin_add);
+  lenv_add_builtin(e, "sub", builtin_sub);
+  lenv_add_builtin(e, "-", builtin_sub);
+  lenv_add_builtin(e, "mul", builtin_mul);
+  lenv_add_builtin(e, "*", builtin_mul);
+  lenv_add_builtin(e, "div", builtin_div);
+  lenv_add_builtin(e, "/", builtin_div);
+  lenv_add_builtin(e, "min", builtin_min);
+  lenv_add_builtin(e, "max", builtin_max);
+  lenv_add_builtin(e, "mod", builtin_mod);
+  lenv_add_builtin(e, "exp", builtin_exp);
+  lenv_add_builtin(e, "pow", builtin_pow);
+  lenv_add_builtin(e, "ln", builtin_ln);
 }
 
 lobj*
@@ -301,7 +311,6 @@ builtin_lambda(lenv* env, lobj* a)
             lobj_typename(LOBJ_SYM),
             lobj_typename(a->cell[0]->cell[i]->type));
   }
-  // TODO support recursion
   lobj* formals = lobj_pop(a, 0);
   lobj* body = lobj_pop(a, 0);
   lobj* lambda = lobj_lambda(formals, body);
@@ -323,12 +332,96 @@ builtin_fn(lenv* env, lobj* a)
 
   lobj* tmp = lobj_qexpr();
   lobj_append(tmp, fname);
-  lobj_append(tmp, fun); // fname & fun moved to tmp
+  lobj_append(tmp, fun);
 
-  return builtin_def(env, tmp); // tmp is freed
+  return builtin_def(env, tmp);
 }
-// lobj*
-// builtin_if(lenv* env, lobj* a)
-// {
-  
-// }
+
+lobj*
+builtin_if(lenv* env, lobj* a)
+{
+  // TODO make else part optional
+  LASSERT_ARGC("if", a, 3);
+  LASSERT_TYPE_I("if", a, 0, LOBJ_INT);
+  LASSERT_TYPE_I("if", a, 1, LOBJ_QEXPR);
+  LASSERT_TYPE_I("if", a, 2, LOBJ_QEXPR);
+
+  lobj* x;
+  if (a->cell[0]->i) {
+    a->cell[1]->type = LOBJ_SEXPR;
+    x = eval(env, lobj_pop(a, 1));
+  } else {
+    a->cell[2]->type = LOBJ_SEXPR;
+    x = eval(env, lobj_pop(a, 2));
+  }
+  lobj_del(a);
+  return x;
+}
+
+lobj*
+builtin_cmp(lenv* env, lobj* a, char* op)
+{
+  LASSERT_ARGC(op, a, 2);
+  int r = 0;
+  if (strcmp(op, "==") == 0) {
+    r = lobj_eq(a->cell[0], a->cell[1]);
+  }
+  if (strcmp(op, "!=") == 0) {
+    r = !lobj_eq(a->cell[0], a->cell[1]);
+  } // unsafe
+  lobj_del(a);
+  return lobj_int(r);
+}
+
+lobj*
+builtin_eq(lenv* env, lobj* a)
+{
+  return builtin_cmp(env, a, "==");
+}
+lobj*
+builtin_ne(lenv* env, lobj* a)
+{
+  return builtin_cmp(env, a, "!=");
+}
+
+// TODO compare double
+lobj*
+builtin_ord(lenv* env, lobj* a, char* op)
+{
+  LASSERT_ARGC(op, a, 2);
+  LASSERT_TYPE_I(op, a, 0, LOBJ_INT);
+  LASSERT_TYPE_I(op, a, 1, LOBJ_INT);
+  int ans = 0;
+  if (strcmp(op, ">") == 0) {
+    ans = a->cell[0]->i > a->cell[1]->i;
+  } else if (strcmp(op, "<") == 0) {
+    ans = a->cell[0]->i < a->cell[1]->i;
+  } else if (strcmp(op, ">=") == 0) {
+    ans = a->cell[0]->i >= a->cell[1]->i;
+  } else if (strcmp(op, "<=") == 0) {
+    ans = a->cell[0]->i <= a->cell[1]->i;
+  }
+  lobj_del(a);
+  return lobj_int(ans);
+}
+lobj*
+builtin_lt(lenv* env, lobj* a)
+{
+  return builtin_ord(env, a, "<");
+}
+lobj*
+builtin_le(lenv* env, lobj* a)
+{
+  return builtin_ord(env, a, "<=");
+}
+
+lobj*
+builtin_gt(lenv* env, lobj* a)
+{
+  return builtin_ord(env, a, ">");
+}
+lobj*
+builtin_ge(lenv* env, lobj* a)
+{
+  return builtin_ord(env, a, ">=");
+}
