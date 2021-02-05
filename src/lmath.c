@@ -1,6 +1,10 @@
+#define _XOPEN_SOURCE 500
+#include "mpc.h"
+#include <float.h>
+#include <math.h>
+
 #include "lmath.h"
 #include "lobj.h"
-#include <math.h>
 
 lobj*
 check_args(lobj* v, const char* fname)
@@ -40,7 +44,7 @@ sub_(double a, double b)
 }
 
 lobj*
-builtin_sub(lenv* e, lobj* v)
+builtin_fsub(lenv* e, lobj* v)
 {
   lobj* err = check_args(v, "sub");
   if (err)
@@ -59,7 +63,7 @@ add_(double a, double b)
   return a + b;
 }
 lobj*
-builtin_add(lenv* e, lobj* v)
+builtin_fadd(lenv* e, lobj* v)
 {
   lobj* err = check_args(v, "add");
   if (err)
@@ -71,7 +75,7 @@ builtin_add(lenv* e, lobj* v)
 }
 
 lobj*
-builtin_div(lenv* e, lobj* v)
+builtin_fdiv(lenv* e, lobj* v)
 {
   lobj* err = check_args(v, "div");
   if (err)
@@ -104,7 +108,7 @@ mul_(double a, double b)
   return a * b;
 }
 lobj*
-builtin_mul(lenv* e, lobj* v)
+builtin_fmul(lenv* e, lobj* v)
 {
   return recursive_op_(e, v, mul_, "mul");
 }
@@ -115,7 +119,7 @@ min_(double a, double b)
   return a > b ? b : a;
 }
 lobj*
-builtin_min(lenv* e, lobj* v)
+builtin_fmin(lenv* e, lobj* v)
 {
   return recursive_op_(e, v, min_, "min");
 }
@@ -126,7 +130,7 @@ max_(double a, double b)
   return a < b ? b : a;
 }
 lobj*
-builtin_max(lenv* e, lobj* v)
+builtin_fmax(lenv* e, lobj* v)
 {
   return recursive_op_(e, v, max_, "max");
 }
@@ -150,7 +154,7 @@ binary_op_(lenv* e, lobj* v, double (*op)(double, double), const char* fname)
 }
 
 lobj*
-builtin_mod(lenv* e, lobj* v)
+builtin_fmod(lenv* e, lobj* v)
 {
   return binary_op_(e, v, fmod, "mod");
 }
@@ -188,4 +192,36 @@ lobj*
 builtin_ln(lenv* e, lobj* v)
 {
   return unary_op_(e, v, log, "ln");
+}
+
+// cmp
+lobj*
+builtin_feq(lenv* e, lobj* v)
+{
+  LASSERT_ARGC("float ==", v, 2);
+  LASSERT_TYPE_I("float ==", v, 0, LOBJ_DOUBLE);
+  LASSERT_TYPE_I("float ==", v, 1, LOBJ_DOUBLE);
+  lobj* ans = lobj_int(fabs(v->cell[0]->d - v->cell[0]->d) < DBL_EPSILON);
+  lobj_del(v);
+  return ans;
+}
+lobj*
+builtin_fgt(lenv* e, lobj* v)
+{
+  LASSERT_ARGC("float >", v, 2);
+  LASSERT_TYPE_I("float >", v, 0, LOBJ_DOUBLE);
+  LASSERT_TYPE_I("float >", v, 1, LOBJ_DOUBLE);
+  lobj* ans = lobj_int(v->cell[0]->d > v->cell[1]->d);
+  lobj_del(v);
+  return ans;
+}
+lobj*
+builtin_flt(lenv* e, lobj* v)
+{
+  LASSERT_ARGC("float <", v, 2);
+  LASSERT_TYPE_I("float <", v, 0, LOBJ_DOUBLE);
+  LASSERT_TYPE_I("float <", v, 1, LOBJ_DOUBLE);
+  lobj* ans = lobj_int(v->cell[0]->d < v->cell[1]->d);
+  lobj_del(v);
+  return ans;
 }

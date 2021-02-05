@@ -54,6 +54,7 @@ extern "C"
     LOBJ_DOUBLE,
     LOBJ_INT,
     LOBJ_SYM,
+    LOBJ_STR,
     LOBJ_SEXPR,
     LOBJ_QEXPR,
     LOBJ_FUNC
@@ -74,7 +75,7 @@ extern "C"
     char* err;
     // symbol
     char* sym;
-
+    char* str;
     // func
     lbuiltinFunc builtin;
     lenv* env;

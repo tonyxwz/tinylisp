@@ -14,7 +14,8 @@ primitives:
 
 ## Builtin
 
-- math operation: + - * / mod pow exp ln
+- integer math operation: + - * /
+- double operator: add sub mul div mod pow exp ln
 - compare: max min
 - Q-Expression: list head tail join eval
 - Environment: def, =, dir, echo, lambda

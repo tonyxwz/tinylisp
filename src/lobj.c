@@ -150,7 +150,6 @@ lobj_copy(lobj* v)
 {
   lobj* x = lobj_common_init();
   x->type = v->type;
-
   switch (v->type) {
     case LOBJ_ERR:
       x->err = malloc(strlen(v->err) + 1);
@@ -193,7 +192,6 @@ lobj_move(lobj* v)
 {
   lobj* x = lobj_common_init();
   x->type = v->type;
-
   switch (v->type) {
     case LOBJ_ERR:
       x->err = v->err;

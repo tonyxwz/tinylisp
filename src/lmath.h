@@ -9,21 +9,26 @@ extern "C"
 #include "lobj.h"
 #include "lenv.h"
 
-  // recursive
-  lobj* builtin_sub(lenv* e, lobj* v);
-  lobj* builtin_add(lenv* e, lobj* v);
-  lobj* builtin_div(lenv* e, lobj* v);
-  lobj* builtin_mul(lenv* e, lobj* v);
-  lobj* builtin_min(lenv* e, lobj* v);
-  lobj* builtin_max(lenv* e, lobj* v);
+  // variadic
+  lobj* builtin_fsub(lenv* e, lobj* v);
+  lobj* builtin_fadd(lenv* e, lobj* v);
+  lobj* builtin_fdiv(lenv* e, lobj* v);
+  lobj* builtin_fmul(lenv* e, lobj* v);
+  lobj* builtin_fmin(lenv* e, lobj* v);
+  lobj* builtin_fmax(lenv* e, lobj* v);
 
   // binary
-  lobj* builtin_mod(lenv* e, lobj* v);
+  lobj* builtin_fmod(lenv* e, lobj* v);
   lobj* builtin_pow(lenv* e, lobj* v);
 
   // unary
   lobj* builtin_exp(lenv* e, lobj* v);
   lobj* builtin_ln(lenv* e, lobj* v);
+  
+  // cmp
+  lobj* builtin_feq(lenv* e, lobj* v);
+  lobj* builtin_fgt(lenv* e, lobj* v);
+  lobj* builtin_flt(lenv* e, lobj* v);
 
 #ifdef __cplusplus
 } // extern "C"

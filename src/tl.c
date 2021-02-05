@@ -1,17 +1,17 @@
+#include "lenv.h"
+#include "lobj.h"
+#define __USE_MISC
+#include <math.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <math.h>
 
 #include <readline/history.h>
 #include <readline/readline.h>
 
-#include "lenv.h"
-#include "lobj.h"
-#include "qexpr.h"
 #include "tl.h"
 
 int
@@ -42,7 +42,7 @@ repl()
             " \
     integer  : /[0-9]+/ ; \
     double   : /(\\b|\\B)-?([0-9]*)?\\.[0-9]+(\\B|\\b)/ ; \
-    symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ; \
+    symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&%\\^\\|]+/ ; \
     sexpr: '(' <expr>* ')' ;\
     qexpr: '{' <expr>* '}'; \
     expr     : <double> | <integer> | <symbol> | <sexpr> | <qexpr> ; \
@@ -179,6 +179,18 @@ init_env(lenv* e)
   lenv_add_builtin(e, "<=", builtin_le);
   lenv_add_builtin(e, ">=", builtin_ge);
 
+  lenv_add_builtin(e, "+", builtin_add);
+  lenv_add_builtin(e, "-", builtin_sub);
+  lenv_add_builtin(e, "*", builtin_mul);
+  lenv_add_builtin(e, "/", builtin_div);
+  lenv_add_builtin(e, "%", builtin_mod);
+
+  // logical
+  lenv_add_builtin(e, "&&", builtin_and);
+  lenv_add_builtin(e, "!", builtin_not);
+  lenv_add_builtin(e, "||", builtin_or);
+
+  // list
   lenv_add_builtin(e, "list", builtin_list);
   lenv_add_builtin(e, "head", builtin_head);
   lenv_add_builtin(e, "tail", builtin_tail);
@@ -186,20 +198,29 @@ init_env(lenv* e)
   lenv_add_builtin(e, "eval", builtin_eval);
   lenv_add_builtin(e, "len", builtin_len);
 
-  lenv_add_builtin(e, "add", builtin_add);
-  lenv_add_builtin(e, "+", builtin_add);
-  lenv_add_builtin(e, "sub", builtin_sub);
-  lenv_add_builtin(e, "-", builtin_sub);
-  lenv_add_builtin(e, "mul", builtin_mul);
-  lenv_add_builtin(e, "*", builtin_mul);
-  lenv_add_builtin(e, "div", builtin_div);
-  lenv_add_builtin(e, "/", builtin_div);
-  lenv_add_builtin(e, "min", builtin_min);
-  lenv_add_builtin(e, "max", builtin_max);
-  lenv_add_builtin(e, "mod", builtin_mod);
+  // TODO make double function named only
+  lenv_add_builtin(e, "add", builtin_fadd);
+  lenv_add_builtin(e, "sub", builtin_fsub);
+  lenv_add_builtin(e, "mul", builtin_fmul);
+  lenv_add_builtin(e, "div", builtin_fdiv);
+
+  lenv_add_builtin(e, "min", builtin_fmin);
+  lenv_add_builtin(e, "max", builtin_fmax);
+
+  lenv_add_builtin(e, "mod", builtin_fmod);
   lenv_add_builtin(e, "exp", builtin_exp);
   lenv_add_builtin(e, "pow", builtin_pow);
   lenv_add_builtin(e, "ln", builtin_ln);
+
+  lenv_add_builtin(e, "eq", builtin_feq);
+  lenv_add_builtin(e, "lt", builtin_flt);
+  lenv_add_builtin(e, "gt", builtin_fgt);
+
+  // symbols
+  // lenv_add_symbol(e, "PI", lobj_double(M_PI));
+  // lenv_add_symbol(e, "E", lobj_double(M_El));
+  lenv_add_symbol(e, "true", lobj_int(1));
+  lenv_add_symbol(e, "false", lobj_int(0));
 }
 
 lobj*
@@ -225,8 +246,9 @@ builtin_var(lenv* env, lobj* a, char* operator)
           operator,
           syms->count,
           a->count - 1);
+
+  // TODO protect builtin symbols
   for (int i = 0; i < syms->count; ++i) {
-    // TODO protect builtin symbols
     if (strcmp(operator, "=") == 0) {
       lenv_create(env, syms->cell[i], a->cell[i + 1]);
     }
@@ -257,11 +279,15 @@ builtin_dir(lenv* env, lobj* a)
   LASSERT(
     a, a->count == 0, "<function dir> expecting 0 argument, got %d", a->count);
 
+  // lobj* ans = lobj_qexpr();
   for (int i = 0; i < env->count; ++i) {
     printf("%s:\t", env->syms[i]);
     lobj_println(env->objs[i]);
+    // lobj_append(ans, env->objs[i]);
   }
   lobj_del(a);
+  // TODO return a qexpr of symbols instead
+  // return ans;
   return lobj_sexpr();
 }
 
@@ -359,6 +385,82 @@ builtin_if(lenv* env, lobj* a)
 }
 
 lobj*
+builtin_int_arith(lenv* env, lobj* a, tl_operator op)
+{
+  // LASSERT_ARGC("arithmatic", a, 2);
+  LASSERT(a,
+          a->count > 1,
+          "<function int arith> got %d args, expecting >= 2",
+          a->count);
+  for (int i = 0; i < a->count; ++i)
+    LASSERT_TYPE_I("arithmatic", a, i, LOBJ_INT)
+  lobj* ans = lobj_pop(a, 0);
+  while (a->count) {
+    lobj* tmp = lobj_pop(a, 0);
+    switch (op) {
+      case OP_ADD:
+        ans->i += tmp->i;
+        break;
+      case OP_SUB:
+        ans->i -= tmp->i;
+        break;
+      case OP_MUL:
+        ans->i = ans->i * tmp->i;
+        break;
+      case OP_DIV:
+        if (tmp->i == 0) {
+          lobj_del(tmp);
+          lobj_del(ans);
+          lobj_del(a);
+          return lobj_err("divide by zero");
+        }
+        ans->i += tmp->i;
+        break;
+      default:
+        lobj_del(tmp);
+        lobj_del(ans);
+        lobj_del(a);
+        return lobj_err("internal error");
+    }
+    lobj_del(tmp);
+  }
+  lobj_del(a);
+  return ans;
+}
+lobj*
+builtin_add(lenv* env, lobj* a)
+{
+  return builtin_int_arith(env, a, OP_ADD);
+}
+lobj*
+builtin_sub(lenv* env, lobj* a)
+{
+  return builtin_int_arith(env, a, OP_SUB);
+}
+lobj*
+builtin_mul(lenv* env, lobj* a)
+{
+  return builtin_int_arith(env, a, OP_MUL);
+}
+lobj*
+builtin_div(lenv* env, lobj* a)
+{
+  return builtin_int_arith(env, a, OP_DIV);
+}
+
+lobj*
+builtin_mod(lenv* env, lobj* a)
+{
+  LASSERT_ARGC("arithmatic", a, 2);
+  for (int i = 0; i < a->count; ++i)
+    LASSERT_TYPE_I("arithmatic", a, i, LOBJ_INT)
+  lobj* ans = lobj_pop(a, 0);
+  ans->i = ans->i % a->cell[0]->i;
+  lobj_del(a);
+  return ans;
+}
+
+lobj*
 builtin_cmp(lenv* env, lobj* a, char* op)
 {
   LASSERT_ARGC(op, a, 2);
@@ -424,4 +526,36 @@ lobj*
 builtin_ge(lenv* env, lobj* a)
 {
   return builtin_ord(env, a, ">=");
+}
+
+lobj*
+builtin_and(lenv* env, lobj* a)
+{
+  LASSERT_ARGC("and", a, 2);
+  for (int i = 0; i < a->count; ++i)
+    LASSERT_TYPE_I("and", a, i, LOBJ_INT);
+  lobj* ans = lobj_pop(a, 0);
+  ans->i = (ans->i && a->cell[0]->i);
+  lobj_del(a);
+  return ans;
+}
+lobj*
+builtin_or(lenv* env, lobj* a)
+{
+  LASSERT_ARGC("or", a, 2);
+  for (int i = 0; i < a->count; ++i)
+    LASSERT_TYPE_I("or", a, i, LOBJ_INT);
+  lobj* ans = lobj_pop(a, 0);
+  ans->i = (ans->i || a->cell[0]->i);
+  lobj_del(a);
+  return ans;
+}
+lobj*
+builtin_not(lenv* env, lobj* a)
+{
+  LASSERT_ARGC("not", a, 1);
+  LASSERT_TYPE_I("not", a, 0, LOBJ_INT);
+  lobj* ans = lobj_take(a, 0);
+  ans->i = !(ans->i);
+  return ans;
 }

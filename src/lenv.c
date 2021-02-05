@@ -86,6 +86,16 @@ lenv_add_builtin(lenv* env, char* sym, lbuiltinFunc f)
 {
   lobj* key = lobj_sym(sym);
   lobj* val = lobj_func(f);
+  val->constant = true;
+  lenv_create(env, key, val);
+  lobj_del(key);
+  lobj_del(val);
+}
+void
+lenv_add_symbol(lenv* env, char* sym, lobj* val)
+{
+  lobj* key = lobj_sym(sym);
+  val->constant = true;
   lenv_create(env, key, val);
   lobj_del(key);
   lobj_del(val);
