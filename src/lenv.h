@@ -1,12 +1,12 @@
 #ifndef _LENV_H_
 #define _LENV_H_
 
+#include "lobj.h"
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-#include "lobj.h"
 
   typedef struct lenv lenv;
 
@@ -34,7 +34,7 @@ extern "C"
   // delete
   lobj* lenv_pop(lenv* env, lobj* k);
   lobj* lenv_remove(lenv* env, lobj* k);
-  
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

@@ -1,14 +1,13 @@
 #ifndef _LMATH_H_
 #define _LMATH_H_
 
+#include "lobj.h"
+#include "lenv.h"
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-#include "lobj.h"
-#include "lenv.h"
-
   // variadic
   lobj* builtin_fsub(lenv* e, lobj* v);
   lobj* builtin_fadd(lenv* e, lobj* v);
@@ -24,7 +23,7 @@ extern "C"
   // unary
   lobj* builtin_exp(lenv* e, lobj* v);
   lobj* builtin_ln(lenv* e, lobj* v);
-  
+
   // cmp
   lobj* builtin_feq(lenv* e, lobj* v);
   lobj* builtin_fgt(lenv* e, lobj* v);
