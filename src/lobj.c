@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define ERR_STRING_LEN 512
+
 
 lobj*
 lobj_common_init()
@@ -117,7 +117,7 @@ lobj_lambda(lobj* formals, lobj* body)
   lobj* v = lobj_common_init();
   v->type = LOBJ_FUNC;
   v->builtin = NULL;
-  v->env = lenv_new();
+  v->env = lenv_new(LAMBDA_ENV_INIT_SIZE);
   v->formals = formals;
   v->body = body;
   return v;
@@ -157,7 +157,7 @@ lobj_del(lobj* v)
 }
 
 lobj*
-lobj_copy(lobj* v)
+lobj_copy(const lobj* v)
 {
   lobj* x = lobj_common_init();
   x->type = v->type;
@@ -541,12 +541,10 @@ eval(lenv* env, lobj* v)
 lobj*
 eval_sexpr(lenv* env, lobj* v)
 {
-  // (do (= {y} 8) (= {x} 9) (+ x y))
-  // -> ([func do] () () 16)
   for (int i = 0; i < v->count; ++i) {
     v->cell[i] = eval(env, v->cell[i]);
   }
-  // error handling, TODO move to above for loop?
+  // error handling, move to above for loop?
   for (int i = 0; i < v->count; ++i) {
     if (v->cell[i]->type == LOBJ_ERR)
       return lobj_take(v, i);

@@ -2,24 +2,27 @@
 #define _LENV_H_
 
 #include "lobj.h"
-
+#include "map.h"
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+#define GLOBAL_MAP_SIZE 20000
 
   typedef struct lenv lenv;
 
   // TODO use a hash table for symbol lookup
   struct lenv
   {
-    int count;
-    char** syms;
-    lobj** objs;
+    // int count;
+    // char** syms;
+    // lobj** objs;
+    map_t* map;
     lenv* par;
   };
 
-  lenv* lenv_new(void);
+  lenv* lenv_new(int size);
   lenv* lenv_copy(lenv* e);
   void lenv_del(lenv* e);
 
@@ -33,7 +36,7 @@ extern "C"
   lobj* lenv_read(lenv* env, lobj* k);
   // delete
   lobj* lenv_pop(lenv* env, lobj* k);
-  lobj* lenv_remove(lenv* env, lobj* k);
+  int lenv_remove(lenv* env, lobj* k);
 
 #ifdef __cplusplus
 } // extern "C"

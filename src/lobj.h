@@ -15,6 +15,9 @@ extern "C"
 {
 #endif
 
+#define ERR_STRING_LEN 512
+#define LAMBDA_ENV_INIT_SIZE 200
+ 
 // TODO Improve macros
 // ASSERT_OR_CLEAN ...->##__VA_ARGS__
 #define LASSERT(args, cond, emsg, ...)                                         \
@@ -103,7 +106,7 @@ extern "C"
   void lobj_del(lobj* v);
   lobj* lobj_take(lobj* sexpr, int i);
   lobj* lobj_pop(lobj* sexpr, int i);
-  lobj* lobj_copy(lobj* v);
+  lobj* lobj_copy(const lobj* v);
   lobj* lobj_move(lobj* v);
 
   // lexing and parsing

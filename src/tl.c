@@ -1,4 +1,5 @@
 #define _XOPEN_SOURCE 500
+#include "map.h"
 #include "mpc.h"
 #include "lenv.h"
 #include "lobj.h"
@@ -56,7 +57,7 @@ main(int argc, char** argv)
             TL);
   int return_code = 0;
 
-  lenv* env = lenv_new();
+  lenv* env = lenv_new(GLOBAL_MAP_SIZE);
   init_env(env);
 
   if (argc > 1) {
@@ -178,9 +179,9 @@ init_env(lenv* e)
   // lenv_add_symbol(e, "true", lobj_int(1));
   // lenv_add_symbol(e, "false", lobj_int(0));
 
-  for (int i = 0; i < e->count; ++i) {
-    e->objs[i]->constant = true;
-  }
+  // for (int i = 0; i < e->count; ++i) {
+  //   e->objs[i]->constant = true;
+  // }
 }
 
 lobj*
@@ -239,9 +240,15 @@ builtin_dir(lenv* env, lobj* a)
 
   LASSERT_ARGC("dir", a, 1);
   // lobj* ans = lobj_qexpr();
-  for (int i = 0; i < env->count; ++i) {
-    printf("%s:\t", env->syms[i]);
-    lobj_println(env->objs[i]);
+  for (int i = 0; i < env->map->max_size; ++i) {
+    if (env->map->entries[i]) {
+      entry_t* e = env->map->entries[i];  
+      while (e) {
+        printf("slot[%d]: %s\t", i, e->key);
+        lobj_println(e->val);
+        e = e->next;
+      }
+    }
     // lobj_append(ans, env->objs[i]);
   }
   lobj_del(a);
@@ -267,7 +274,12 @@ builtin_del(lenv* env, lobj* a)
             syms->cell[i]->type == LOBJ_SYM,
             "<function del> can only delete symbols");
   }
-  lobj* result = lenv_remove(env, syms->cell[0]);
+  lobj* result;
+  if (lenv_remove(env, syms->cell[0])) {
+    result = lobj_sexpr();
+  } else {
+    result = lobj_err("undefined symbol %s", syms->str);
+  }
   lobj_del(a);
   return result;
 }
