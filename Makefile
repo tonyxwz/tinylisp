@@ -13,10 +13,15 @@ SRCS := $(shell find $(SRC_DIRS) -name *.cpp -or -name *.c)
 # Every folder in ./src will need to be passed to GCC so that it can find header files
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 
+# mpc third-party
+INC_DIRS += ./third-party/mpc
+SRCS += ./third-party/mpc/mpc.c
+
 # compiler & linker flags
 # =======================
 # Add a prefix to INC_DIRS. So moduleA would become -ImoduleA. GCC understands this -I flag
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
+
 # Address Sanitizer
 ifeq ($(NOASAN), 1)
 	ASANFLAGS :=

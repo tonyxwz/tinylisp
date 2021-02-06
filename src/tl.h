@@ -46,7 +46,7 @@ extern "C"
   lobj* builtin_load(lenv* env, lobj* a);
 
   lobj* builtin_lambda(lenv* env, lobj* a);
-  lobj* builtin_fn(lenv* env, lobj* a);
+  // lobj* builtin_fn(lenv* env, lobj* a);
   lobj* builtin_if(lenv* env, lobj* a);
 
   lobj* builtin_add(lenv* env, lobj* a);

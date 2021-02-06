@@ -83,7 +83,7 @@ repl()
     add_history(input);
     mpc_result_t r;
     if (mpc_parse("<stdin>", input, TL, &r)) {
-      // mpc_ast_print(r.output);
+      mpc_ast_print(r.output);
       lobj* tmp = eval(env, lobj_read(r.output));
       lobj_println(tmp);
       lobj_del(tmp);
@@ -131,6 +131,8 @@ eval(lenv* env, lobj* v)
 lobj*
 eval_sexpr(lenv* env, lobj* v)
 {
+  // (do (= {y} 8) (= {x} 9) (+ x y))
+  // -> ([func do] () () 16)
   for (int i = 0; i < v->count; ++i) {
     v->cell[i] = eval(env, v->cell[i]);
   }
@@ -141,6 +143,9 @@ eval_sexpr(lenv* env, lobj* v)
   }
   if (v->count == 0) // empty expression ()
     return v;
+  if (v->count == 1) {
+    return eval(env, lobj_take(v, 0));
+  }
   // if (v->count == 1) // echo literals (5) TODO allow or not?
   // {
   //   lobj* x = lobj_pop(v, 0);
@@ -184,7 +189,7 @@ init_env(lenv* e)
 
   lenv_add_builtin(e, "\\", builtin_lambda);
   lenv_add_builtin(e, "lambda", builtin_lambda);
-  lenv_add_builtin(e, "fn", builtin_fn);
+  // lenv_add_builtin(e, "fn", builtin_fn);
   lenv_add_builtin(e, "if", builtin_if);
 
   lenv_add_builtin(e, "==", builtin_eq);
@@ -233,11 +238,12 @@ init_env(lenv* e)
   lenv_add_builtin(e, "gt", builtin_fgt);
 
   // const symbols
-  lenv_add_symbol(e, "PI", lobj_double(M_PI));
-  lenv_add_symbol(e, "E", lobj_double(M_E));
-  lenv_add_symbol(e, "true", lobj_int(1));
-  lenv_add_symbol(e, "false", lobj_int(0));
-  for(int i = 0; i < e->count; ++i) {
+  // lenv_add_symbol(e, "PI", lobj_double(M_PI));
+  // lenv_add_symbol(e, "E", lobj_double(M_E));
+  // lenv_add_symbol(e, "true", lobj_int(1));
+  // lenv_add_symbol(e, "false", lobj_int(0));
+
+  for (int i = 0; i < e->count; ++i) {
     e->objs[i]->constant = true;
   }
 }
@@ -295,9 +301,8 @@ builtin_assign(lenv* env, lobj* a)
 lobj*
 builtin_dir(lenv* env, lobj* a)
 {
-  LASSERT(
-    a, a->count == 0, "<function dir> expecting 0 argument, got %d", a->count);
 
+  LASSERT_ARGC("dir", a, 1);
   // lobj* ans = lobj_qexpr();
   for (int i = 0; i < env->count; ++i) {
     printf("%s:\t", env->syms[i]);
@@ -409,24 +414,24 @@ builtin_lambda(lenv* env, lobj* a)
   return lambda;
 }
 
-lobj*
-builtin_fn(lenv* env, lobj* a)
-{
-  LASSERT_ARGC("fn", a, 2);
-  LASSERT_TYPE_I("fn", a, 0, LOBJ_QEXPR);
-  LASSERT_TYPE_I("fn", a, 1, LOBJ_QEXPR);
-  LASSERT(a,
-          a->cell[0]->count > 0,
-          "<function fn> requires at least one arg as function name");
-  lobj* fname = lobj_append(lobj_qexpr(), lobj_pop(a->cell[0], 0));
-  lobj* fun = builtin_lambda(env, a); // a is freed
+// lobj*
+// builtin_fn(lenv* env, lobj* a)
+// {
+//   LASSERT_ARGC("fn", a, 2);
+//   LASSERT_TYPE_I("fn", a, 0, LOBJ_QEXPR);
+//   LASSERT_TYPE_I("fn", a, 1, LOBJ_QEXPR);
+//   LASSERT(a,
+//           a->cell[0]->count > 0,
+//           "<function fn> requires at least one arg as function name");
+//   lobj* fname = lobj_append(lobj_qexpr(), lobj_pop(a->cell[0], 0));
+//   lobj* fun = builtin_lambda(env, a); // a is freed
 
-  lobj* tmp = lobj_qexpr();
-  lobj_append(tmp, fname);
-  lobj_append(tmp, fun);
+//   lobj* tmp = lobj_qexpr();
+//   lobj_append(tmp, fname);
+//   lobj_append(tmp, fun);
 
-  return builtin_def(env, tmp);
-}
+//   return builtin_def(env, tmp);
+// }
 
 lobj*
 builtin_if(lenv* env, lobj* a)

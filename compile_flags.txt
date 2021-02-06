@@ -1,4 +1,5 @@
 -xc
 -std=c17
+-Ithird-party/mpc
 -isystem$HOME/source/vcpkg/installed/x64-linux/include
 -L/home$HOME/source/vcpkg/installed/x64-linux/debug/lib

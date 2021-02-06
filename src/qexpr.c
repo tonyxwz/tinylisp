@@ -50,14 +50,9 @@ builtin_list(lenv* e, lobj* v)
 lobj*
 builtin_eval(lenv* e, lobj* v)
 {
-  LASSERT(
-    v, v->count == 1, "<function eval> requires 1 argument, got %d", v->count);
-  LASSERT(v,
-          v->cell[0]->type == LOBJ_QEXPR,
-          "<function %s> got wrong type of argument, expecting %s, got %s",
-          "eval",
-          lobj_typename(LOBJ_QEXPR),
-          lobj_typename(v->cell[0]->type));
+  LASSERT_ARGC("eval", v, 1);
+  LASSERT_TYPE_I("eval", v, 0, LOBJ_QEXPR);
+
   lobj* sexpr = lobj_take(v, 0);
   sexpr->type = LOBJ_SEXPR;
   lobj* r = eval(e, sexpr);
