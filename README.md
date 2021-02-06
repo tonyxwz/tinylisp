@@ -24,7 +24,7 @@ fibonacci
     {+ (fib (- n 1)) (fib (- n 2))}})
 ```
 
-`tl` only wraps `log` from `<math.h>` which is natural logarithm.
+`tl` only wraps `log` from `<math.h>` as `ln` which is natural logarithm.
 ```lisp
 ;; log_x (y)
 (fn {log x y}
@@ -55,7 +55,7 @@ fibonacci
 ## Implementation
 
 ### Parser
-Lexing is being kept as a black bos using library from [libmpc](https://github.com/orangeduck/mpc).
+Lexing is being kept as a black box using library from [libmpc](https://github.com/orangeduck/mpc).
 
 The abstract symtax tree
 
