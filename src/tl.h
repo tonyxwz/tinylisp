@@ -28,7 +28,7 @@ extern "C"
     OP_NOT
   } tl_operator;
 
-  int repl();
+  int repl(lenv* env);
   // evaluate
   lobj* eval(lenv* e, lobj* v);
   lobj* eval_sexpr(lenv* env, lobj* v);

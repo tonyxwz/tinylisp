@@ -16,24 +16,11 @@
 
 #include "tl.h"
 
-// mpc_parser_t* Integer;
-// mpc_parser_t* Double;
-// mpc_parser_t* Symbol;
-// mpc_parser_t* String;
-// mpc_parser_t* Comment;
-// mpc_parser_t* Sexpr;
-// mpc_parser_t* Qexpr;
-// mpc_parser_t* Expr;
 // global variable
 mpc_parser_t* TL;
-int
-main(int argc, char** argv)
-{
-  return repl();
-}
 
 int
-repl()
+main(int argc, char** argv)
 {
   mpc_parser_t* Integer = mpc_new("integer");
   mpc_parser_t* Double = mpc_new("double");
@@ -48,7 +35,7 @@ repl()
   mpca_lang(MPCA_LANG_DEFAULT,
             " \
     integer:  /[0-9]+/ ;                                   \
-    double:   /(\\b|\\B)-?([0-9]*)?\\.[0-9]+(\\B|\\b)/ ;   \
+    double:   /\\B-?([0-9]*)?\\.[0-9]+\\B/ ;   \
     symbol:   /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&%\\^\\|]+/ ;    \
     string:   /\"(\\\\.|[^\"])*\"/ ;                       \
     comment:  /;[^\\r\\n]*/ ;                              \
@@ -67,12 +54,35 @@ repl()
             Qexpr,
             Expr,
             TL);
-
-  puts("Tony's Lisp (tl) version 0.1-dev");
-  puts("Press Ctrl+C to exit");
+  int return_code = 0;
 
   lenv* env = lenv_new();
   init_env(env);
+
+  if (argc > 1) {
+    for (int i = 1; i < argc; ++i) {
+      lobj* filename = lobj_append(lobj_sexpr(), lobj_str(argv[i]));
+      lobj* x = builtin_load(env, filename);
+      if (x->type == LOBJ_ERR) {
+        return_code = 1;
+        lobj_println(x);
+      }
+      lobj_del(x);
+    }
+  } else {
+    return_code = repl(env);
+  }
+  lenv_del(env);
+  mpc_cleanup(
+    9, Double, Integer, Symbol, String, Comment, Sexpr, Qexpr, Expr, TL);
+  return return_code;
+}
+
+int
+repl(lenv* env)
+{
+  puts("Tony's Lisp (tl) version 0.1-dev");
+  puts("Press Ctrl+C to exit");
 
   while (1) {
     char* input = readline(">>> ");
@@ -83,7 +93,9 @@ repl()
     add_history(input);
     mpc_result_t r;
     if (mpc_parse("<stdin>", input, TL, &r)) {
+#ifdef DEBUG
       mpc_ast_print(r.output);
+#endif
       lobj* tmp = eval(env, lobj_read(r.output));
       lobj_println(tmp);
       lobj_del(tmp);
@@ -96,9 +108,6 @@ repl()
     free(input);
   }
 
-  lenv_del(env);
-  mpc_cleanup(
-    9, Double, Integer, Symbol, String, Comment, Sexpr, Qexpr, Expr, TL);
   return 0;
 }
 
@@ -124,9 +133,8 @@ eval(lenv* env, lobj* v)
 }
 
 /* Think of func `eval` as a transformer, taking in one lobj* transform it and
- * return back.
- * lobj(sexpr) -> lobj(num/err)
- * since lobj_read always read a expression as a sexpr
+ * return back.  lobj(sexpr) -> lobj(num/err) since lobj_read always read a
+ * expression as a sexpr
  */
 lobj*
 eval_sexpr(lenv* env, lobj* v)
@@ -238,8 +246,8 @@ init_env(lenv* e)
   lenv_add_builtin(e, "gt", builtin_fgt);
 
   // const symbols
-  // lenv_add_symbol(e, "PI", lobj_double(M_PI));
-  // lenv_add_symbol(e, "E", lobj_double(M_E));
+  lenv_add_symbol(e, "PI", lobj_double(M_PI));
+  lenv_add_symbol(e, "E", lobj_double(M_E));
   // lenv_add_symbol(e, "true", lobj_int(1));
   // lenv_add_symbol(e, "false", lobj_int(0));
 
