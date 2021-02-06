@@ -182,7 +182,7 @@ lobj_copy(lobj* v)
       break;
     case LOBJ_STR:
       x->str = malloc(strlen(v->str) + 1);
-      strcpy(x->sym, v->sym);
+      strcpy(x->str, v->str);
       break;
     case LOBJ_SEXPR:
     case LOBJ_QEXPR:

@@ -93,6 +93,7 @@ extern "C"
   lobj* lobj_int(int x);
   lobj* lobj_err(char* fmt, ...);
   lobj* lobj_sym(char* psym);
+  lobj* lobj_str(char* str);
   lobj* lobj_sexpr(void);
   lobj* lobj_qexpr(void);
   lobj* lobj_func(lbuiltinFunc func);
