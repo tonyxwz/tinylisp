@@ -5,8 +5,8 @@
 
 
 ;; Fibonacci
-(fn {fib n}
-  {if (|| (== n 1) (== n 2))
+(fn {fib n} {
+  if (|| (== n 1) (== n 2))
     {1}
     {+ (fib (- n 1)) (fib (- n 2))}})
 
@@ -41,8 +41,8 @@
   {eval (head (tail (tail l)))})
 
 ;; lenth in lisp way
-(fn {len l}
-  {if (== l nil)
+(fn {len l} {
+  if (== l nil)
     {0}
     {+ 1 (len (tail l))} })
 
@@ -50,62 +50,74 @@
 (fn {first l}
   {eval (head l)})
 
-(fn {nth n l}
-  {if (== n 0)
+(fn {nth n l} {
+  if (== n 0)
     {first l}
-    {nth (- n 1) (tail l)} } )
+    {nth (- n 1) (tail l)} })
 
 (fn {last l}
-  {nth (- (len l) 1) l} )
+  {nth (- (len l) 1) l})
 
 ;; everything inside of a s-expr will be evaluated
 ;; so every element in l will be evaluated directly in the env
 ;; `do` is called. do simply return the last element.
-(fn {do & l} 
-  {if (== l nil)
+(fn {do & l} {
+  if (== l nil)
     {nil}
-    {last l}} )
+    {last l}  })
 
-;; create an empty function scope and eval inside
+;; create an empty anonymouse function and eval inside its scope
 ;; useful:
 ;;    let {do (a) (b) (c)}
 (fn {let b}
-  {(\ {_} b) ()})
+  { (\ {_} b) ()})
 
-(fn {take n l}
+(fn {take n l}{
   if (== n 0)
    {nil}
-   {join (head l)  (take (- n 1) (tail l) ) })
+   {join (head l)  (take (- n 1) (tail l) )} })
 
-(fn {drop n l}
+(fn {drop n l} {
   if (== n 0)
-  {nil}
-  {drop (- n 1) (tail l)})
+    {l}
+    {drop (- n 1) (tail l)} })
 
 ;; split l at nth elem
 (fn {split n l}
-  {join (take n l) (drop n l) } )
+  {join (take n l) (drop n l) })
 
 ;; x is in l
-(fn {elem x l} 
+(fn {elem x l} {
   if (== l nil)
-  {false}
-  {if (== x (first l))
-    {true}
-    {elem x (tail l)}}
-)
+    {false}
+    {if (== x (first l))
+      {true}
+      {elem x (tail l)}} })
 
-
-(fn {map f l}
-  {if (== l nil)
+(fn {map f l} {
+  if (== l nil)
     {nil}
-    {join (list (f (first l)))  (map f (tail l)) }}
-)
+    {join (list (f (first l)))  (map f (tail l)) } })
 
-(fn {filter f l} 
+(fn {filter f l} {
   if (== l nil)
-  {nil}
-  {join (if (f (first l)) {head l} {nil} ) (filter (tail l) ) }
-)
+    {nil}
+    {join (if (f (first l)) {head l} {nil} ) (filter (tail l) ) } })
 
+;; case and switch like functions
+(fn {select & pairs} {
+  if (== pairs nil)
+    {error "no selection found"}
+    {if (first (first pairs))
+      {second (first pairs)}
+      {unpack select (tail pairs)} } })
 
+(def {otherwise} true)
+
+(fn {case x & pairs} {
+  if (== nil pairs)
+    {error "no matching"} {
+    if (== x (first (first pairs))) 
+      {second (first pairs)}
+      {unpack case (joint (list x) (tail pairs))}}
+})
