@@ -55,7 +55,7 @@ lobj_err(char* fmt, ...)
   v->str = malloc(ERR_STRING_LEN);
   vsnprintf(v->str, ERR_STRING_LEN - 1, fmt, va);
 
-  v->str= realloc(v->str, strlen(v->str) + 1);
+  v->str = realloc(v->str, strlen(v->str) + 1);
   va_end(va);
 
   return v;
@@ -302,7 +302,7 @@ lobj_read(mpc_ast_t* ast)
         strcmp(ast->children[i]->contents, ")") == 0 ||
         strcmp(ast->children[i]->contents, "{") == 0 || // qexpr branch
         strcmp(ast->children[i]->contents, "}") == 0 ||
-        strcmp(ast->children[i]->tag, "regex") == 0  ||
+        strcmp(ast->children[i]->tag, "regex") == 0 ||
         strstr(ast->children[i]->tag, "comment"))
       continue;
     x = lobj_append(x, lobj_read(ast->children[i]));
@@ -511,4 +511,77 @@ lobj_eq(lobj* a, lobj* b)
       break;
   }
   return 0;
+}
+
+/* The design of the parser guarantees that any input is read as sexpr at the
+ * ast root node.
+ * >>> mod
+ * ast: (mod)
+ *  eval "(mod)"
+ *    eval_sexpr "(mod)"
+ *      eval "mod" -> read from environment "mod" which is a function
+ */
+lobj*
+eval(lenv* env, lobj* v)
+{
+  if (v->type == LOBJ_SYM) {
+    lobj* x = lenv_read(env, v);
+    lobj_del(v);
+    return x;
+  } else if (v->type == LOBJ_SEXPR)
+    return eval_sexpr(env, v);
+  else // qexpr, num, err: no eval
+    return v;
+}
+
+/* Think of func `eval` as a transformer, taking in one lobj* transform it and
+ * return back.  lobj(sexpr) -> lobj(num/err) since lobj_read always read a
+ * expression as a sexpr
+ */
+lobj*
+eval_sexpr(lenv* env, lobj* v)
+{
+  // (do (= {y} 8) (= {x} 9) (+ x y))
+  // -> ([func do] () () 16)
+  for (int i = 0; i < v->count; ++i) {
+    v->cell[i] = eval(env, v->cell[i]);
+  }
+  // error handling, TODO move to above for loop?
+  for (int i = 0; i < v->count; ++i) {
+    if (v->cell[i]->type == LOBJ_ERR)
+      return lobj_take(v, i);
+  }
+  if (v->count == 0) // empty expression ()
+    return v;
+  if (v->count == 1) {
+    return eval(env, lobj_take(v, 0));
+  }
+  // if (v->count == 1) // echo literals (5) TODO allow or not?
+  // {
+  //   lobj* x = lobj_pop(v, 0);
+  //   if (x->type == LOBJ_FUNC) {
+  //     lobj* x2 = lobj_call(x, v, env);
+  //     lobj_del(x);
+  //     return x2;
+  //   } else {
+  //     lobj_del(v);
+  //     return x;
+  //   }
+  // }
+
+  // operator/symbol is the first cell of sexpr
+  lobj* f = lobj_pop(v, 0);
+  if (f->type != LOBJ_FUNC) {
+    lobj* err =
+      lobj_err("S-expression starts with incorrect type, expecting %s, got %s",
+               lobj_typename(LOBJ_FUNC),
+               lobj_typename(f->type));
+    lobj_del(v);
+    lobj_del(f);
+    return err;
+  }
+  // v contains argument to f, after poping f out
+  lobj* result = lobj_call(f, v, env);
+  lobj_del(f);
+  return result;
 }

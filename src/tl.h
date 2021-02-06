@@ -1,9 +1,5 @@
 #ifndef _TL_H_
 #define _TL_H_
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 
 #include "mpc.h"
 #include "lobj.h"
@@ -11,6 +7,11 @@ extern "C"
 #include "lmath.h"
 #include "sexpr.h"
 #include "qexpr.h"
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
   typedef enum
   {
     OP_EQ,
@@ -29,9 +30,6 @@ extern "C"
   } tl_operator;
 
   int repl(lenv* env);
-  // evaluate
-  lobj* eval(lenv* e, lobj* v);
-  lobj* eval_sexpr(lenv* env, lobj* v);
   void print_ast();
   // lobj* builtin(lobj* v, const char* sym);
 

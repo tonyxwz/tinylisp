@@ -1,10 +1,5 @@
 #ifndef _LOBJ_H_
 #define _LOBJ_H_
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #include <errno.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -14,6 +9,12 @@ extern "C"
 #include <stdbool.h>
 
 #include "mpc.h"
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 // TODO Improve macros
 // ASSERT_OR_CLEAN ...->##__VA_ARGS__
 #define LASSERT(args, cond, emsg, ...)                                         \
@@ -117,6 +118,10 @@ extern "C"
 
   lobj* lobj_call(lobj* f, lobj* args, lenv* env);
   int lobj_eq(lobj* a, lobj* b);
+
+  // evaluate
+  lobj* eval(lenv* e, lobj* v);
+  lobj* eval_sexpr(lenv* env, lobj* v);
 
 #ifdef __cplusplus
 } // extern "C"

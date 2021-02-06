@@ -1,15 +1,14 @@
 #ifndef _QEXPR_H_
 #define _QEXPR_H_
 
+
+#include <string.h>
+#include "lobj.h"
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-#include <string.h>
-#include "tl.h"
-#include "lobj.h"
-
   // {1 2 3} -> {1}
   lobj* builtin_head(lenv* e, lobj* v);
 
