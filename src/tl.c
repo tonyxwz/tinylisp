@@ -225,16 +225,15 @@ init_env(lenv* e)
   lenv_add_builtin(e, "tail", builtin_tail);
   lenv_add_builtin(e, "join", builtin_join);
   lenv_add_builtin(e, "eval", builtin_eval);
-  lenv_add_builtin(e, "len", builtin_len);
+  // lenv_add_builtin(e, "len", builtin_len);
 
-  // TODO make double function named only
   lenv_add_builtin(e, "add", builtin_fadd);
   lenv_add_builtin(e, "sub", builtin_fsub);
   lenv_add_builtin(e, "mul", builtin_fmul);
   lenv_add_builtin(e, "div", builtin_fdiv);
 
-  lenv_add_builtin(e, "min", builtin_fmin);
-  lenv_add_builtin(e, "max", builtin_fmax);
+  // lenv_add_builtin(e, "min", builtin_fmin);
+  // lenv_add_builtin(e, "max", builtin_fmax);
 
   lenv_add_builtin(e, "mod", builtin_fmod);
   lenv_add_builtin(e, "exp", builtin_exp);
@@ -422,6 +421,7 @@ builtin_lambda(lenv* env, lobj* a)
   return lambda;
 }
 
+// lisp way replacement in stdlib
 // lobj*
 // builtin_fn(lenv* env, lobj* a)
 // {

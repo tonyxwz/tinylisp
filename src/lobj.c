@@ -14,8 +14,8 @@ lobj_common_init()
   v->i = 0;
   v->d = 0;
   v->constant = false;
-  v->err = NULL;
-  v->sym = NULL;
+  // v->err = NULL;
+  // v->sym = NULL;
   v->str = NULL;
   v->env = NULL;
   v->builtin = NULL;
@@ -52,10 +52,10 @@ lobj_err(char* fmt, ...)
   va_list va;
   va_start(va, fmt);
 
-  v->err = malloc(ERR_STRING_LEN);
-  vsnprintf(v->err, ERR_STRING_LEN - 1, fmt, va);
+  v->str = malloc(ERR_STRING_LEN);
+  vsnprintf(v->str, ERR_STRING_LEN - 1, fmt, va);
 
-  v->err = realloc(v->err, strlen(v->err) + 1);
+  v->str= realloc(v->str, strlen(v->str) + 1);
   va_end(va);
 
   return v;
@@ -66,8 +66,8 @@ lobj_sym(char* psym)
 {
   lobj* v = lobj_common_init();
   v->type = LOBJ_SYM;
-  v->sym = malloc(strlen(psym) + 1);
-  strcpy(v->sym, psym);
+  v->str = malloc(strlen(psym) + 1);
+  strcpy(v->str, psym);
   return v;
 }
 
@@ -132,11 +132,7 @@ lobj_del(lobj* v)
     case LOBJ_INT:
       break;
     case LOBJ_ERR:
-      free(v->err);
-      break;
     case LOBJ_SYM:
-      free(v->sym);
-      break;
     case LOBJ_STR:
       free(v->str);
       break;
@@ -166,20 +162,14 @@ lobj_copy(lobj* v)
   lobj* x = lobj_common_init();
   x->type = v->type;
   switch (v->type) {
-    case LOBJ_ERR:
-      x->err = malloc(strlen(v->err) + 1);
-      strcpy(x->err, v->err);
-      break;
     case LOBJ_DOUBLE:
       x->d = v->d;
       break;
     case LOBJ_INT:
       x->i = v->i;
       break;
+    case LOBJ_ERR:
     case LOBJ_SYM:
-      x->sym = malloc(strlen(v->sym) + 1);
-      strcpy(x->sym, v->sym);
-      break;
     case LOBJ_STR:
       x->str = malloc(strlen(v->str) + 1);
       strcpy(x->str, v->str);
@@ -212,19 +202,17 @@ lobj_move(lobj* v)
   lobj* x = lobj_common_init();
   x->type = v->type;
   switch (v->type) {
-    case LOBJ_ERR:
-      x->err = v->err;
-      v->err = NULL;
-      break;
     case LOBJ_DOUBLE:
       x->d = v->d;
       break;
     case LOBJ_INT:
       x->i = v->i;
       break;
+    case LOBJ_ERR:
     case LOBJ_SYM:
-      x->sym = v->sym;
-      v->sym = NULL;
+    case LOBJ_STR:
+      x->str = v->str;
+      v->str = NULL;
       break;
     case LOBJ_SEXPR:
     case LOBJ_QEXPR:
@@ -358,7 +346,7 @@ lobj_print(lobj* v)
 {
   switch (v->type) {
     case LOBJ_ERR:
-      printf("Error: %s", v->err);
+      printf("Error: %s", v->str);
       break;
     case LOBJ_DOUBLE:
       printf("%f", v->d);
@@ -367,7 +355,7 @@ lobj_print(lobj* v)
       printf("%d", v->i);
       break;
     case LOBJ_SYM:
-      printf("%s", v->sym);
+      printf("%s", v->str);
       break;
     case LOBJ_STR:
       lobj_print_str(v);
@@ -443,7 +431,7 @@ lobj_call(lobj* f, lobj* args, lenv* env)
     lobj* sym = lobj_pop(f->formals, 0);
 
     // allow variable argument number
-    if (strcmp(sym->sym, "&") == 0) {
+    if (strcmp(sym->str, "&") == 0) {
       if (f->formals->count != 1) {
         lobj_del(args); // TODO: move this checking to defining lambda
         lobj_del(sym);
@@ -464,7 +452,7 @@ lobj_call(lobj* f, lobj* args, lenv* env)
   }
   lobj_del(args);
   // since args after & is optional,
-  if (f->formals->count && strcmp(f->formals->cell[0]->sym, "&") == 0) {
+  if (f->formals->count && strcmp(f->formals->cell[0]->str, "&") == 0) {
     if (f->formals->count != 2) {
       return lobj_err(
         "Invalid function, '&' should be followed by one single symbol");
@@ -498,9 +486,7 @@ lobj_eq(lobj* a, lobj* b)
     case LOBJ_DOUBLE: // TODO use epsilon
       return a->d == b->d;
     case LOBJ_SYM:
-      return strcmp(a->sym, b->sym) == 0;
     case LOBJ_ERR:
-      return strcmp(a->err, b->err) == 0;
     case LOBJ_STR:
       return strcmp(a->str, b->str) == 0;
     case LOBJ_FUNC:

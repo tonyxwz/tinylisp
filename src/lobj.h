@@ -72,9 +72,9 @@ extern "C"
     int i;
     bool constant;
     // error message
-    char* err;
+    // char* err;
     // symbol
-    char* sym;
+    // char* sym;
     char* str;
     // func
     lbuiltinFunc builtin;

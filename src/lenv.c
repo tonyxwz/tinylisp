@@ -56,7 +56,7 @@ void
 lenv_create(lenv* env, lobj* k, lobj* v)
 {
   for (int i = 0; i < env->count; ++i) {
-    if (strcmp(env->syms[i], k->sym) == 0) {
+    if (strcmp(env->syms[i], k->str) == 0) {
       // update
       lobj_del(env->objs[i]);
       env->objs[i] = lobj_copy(v);
@@ -69,8 +69,8 @@ lenv_create(lenv* env, lobj* k, lobj* v)
   env->objs = realloc(env->objs, sizeof(lobj*) * env->count);
 
   env->objs[env->count - 1] = lobj_copy(v);
-  env->syms[env->count - 1] = malloc(strlen(k->sym) + 1);
-  strcpy(env->syms[env->count - 1], k->sym);
+  env->syms[env->count - 1] = malloc(strlen(k->str) + 1);
+  strcpy(env->syms[env->count - 1], k->str);
 }
 
 void
@@ -105,13 +105,13 @@ lobj*
 lenv_read(lenv* env, lobj* k)
 {
   for (int i = 0; i < env->count; ++i) {
-    if (strcmp(env->syms[i], k->sym) == 0)
+    if (strcmp(env->syms[i], k->str) == 0)
       return lobj_copy(env->objs[i]);
   }
   if (env->par) {
     return lenv_read(env->par, k);
   } else {
-    return lobj_err("unbound symbol '%s'", k->sym);
+    return lobj_err("unbound symbol '%s'", k->str);
   }
 }
 
@@ -120,7 +120,7 @@ lenv_pop(lenv* env, lobj* k)
 {
   int i = find_(env, k);
   if (i < 0)
-    return lobj_err("unbound symbol '%s'", k->sym);
+    return lobj_err("unbound symbol '%s'", k->str);
   lobj* obj = lobj_move(env->objs[i]);
   free(env->syms[i]);
   // lobj_del(env->objs[i]);
@@ -151,7 +151,7 @@ find_(lenv* env, lobj* k)
   if (k->type != LOBJ_SYM)
     return -1;
   for (int i = 0; i < env->count; ++i) {
-    if (strcmp(env->syms[i], k->sym) == 0)
+    if (strcmp(env->syms[i], k->str) == 0)
       return i;
   }
   return -1;
