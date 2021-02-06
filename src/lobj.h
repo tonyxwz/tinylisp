@@ -15,9 +15,14 @@ extern "C"
 {
 #endif
 
+#ifndef ERR_STRING_LEN
 #define ERR_STRING_LEN 512
-#define LAMBDA_ENV_INIT_SIZE 200
- 
+#endif
+
+#ifndef LAMBDA_ENV_INIT_SIZE
+#define LAMBDA_ENV_INIT_SIZE 20
+#endif
+
 // TODO Improve macros
 // ASSERT_OR_CLEAN ...->##__VA_ARGS__
 #define LASSERT(args, cond, emsg, ...)                                         \

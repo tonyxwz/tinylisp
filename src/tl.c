@@ -57,7 +57,7 @@ main(int argc, char** argv)
             TL);
   int return_code = 0;
 
-  lenv* env = lenv_new(GLOBAL_MAP_SIZE);
+  lenv* env = lenv_new(GLOBAL_ENV_INIT_SIZE);
   init_env(env);
 
   if (argc > 1) {

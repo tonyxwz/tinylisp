@@ -8,7 +8,7 @@ extern "C"
 {
 #endif
 
-#define GLOBAL_MAP_SIZE 20000
+#define GLOBAL_ENV_INIT_SIZE 20000
 
   typedef struct lenv lenv;
 
