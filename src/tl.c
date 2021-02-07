@@ -247,12 +247,15 @@ builtin_dir(lenv* env, lobj* a)
   // lobj* ans = lobj_qexpr();
   for (int i = 0; i < env->map->max_size; ++i) {
     if (env->map->entries[i]) {
+      printf("slot[%d]:", i);
       entry_t* e = env->map->entries[i];
       while (e) {
-        printf("slot[%d]: %s\t", i, e->key);
-        lobj_println(e->val);
+        printf("%s = ", e->key);
+        lobj_print(e->val);
+        putchar('\t');
         e = e->next;
       }
+      putchar('\n');
     }
     // lobj_append(ans, env->objs[i]);
   }
