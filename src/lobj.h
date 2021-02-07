@@ -76,25 +76,21 @@ extern "C"
   struct lobj
   {
     lobj_type type;
+    unsigned int rc_;  // reference counter
+    
     // number
     double d;
     int i;
     bool constant;
-    // error message
-    // char* err;
-    // symbol
-    // char* sym;
-    char* str;
+    char* str; // error symbol string
     // func
     lbuiltinFunc builtin;
     lenv* env;
     lobj* formals; // func args: qexpr
     lobj* body;    // func body: qexpr
-
     // expressions
     int count;
-    // list of other lobj's contained in expr
-    struct lobj** cell;
+    struct lobj** cell; // list of other lobj's contained in expr
   };
 
   // ctor dtor
@@ -130,6 +126,9 @@ extern "C"
   // evaluate
   lobj* eval(lenv* e, lobj* v);
   lobj* eval_sexpr(lenv* env, lobj* v);
+
+  void lobj_pool_init();
+  void lobj_pool_del();
 
 #ifdef __cplusplus
 } // extern "C"

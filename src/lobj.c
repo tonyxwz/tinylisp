@@ -1,16 +1,29 @@
 #include "lobj.h"
 #include "lenv.h"
 #include "mpc.h"
+#include "mpool.h"
 #include "qexpr.h"
 #include <stdio.h>
 #include <stdlib.h>
 
 
+static pool_t* obj_pool = NULL;
+void
+lobj_pool_init()
+{
+  obj_pool = pool_new(sizeof(lobj), 256);
+}
+void
+lobj_pool_del()
+{
+  if (obj_pool)
+    pool_del(obj_pool);
+}
 
 lobj*
 lobj_common_init()
 {
-  lobj* v = (lobj*)malloc(sizeof(lobj));
+  lobj* v = pool_alloc(obj_pool);
   v->i = 0;
   v->d = 0;
   v->constant = false;
@@ -23,6 +36,7 @@ lobj_common_init()
   v->body = NULL;
   v->count = 0;
   v->cell = NULL;
+  v->rc_ = 1;
   return v;
 }
 
@@ -153,7 +167,8 @@ lobj_del(lobj* v)
     default:
       break;
   }
-  free(v);
+  // free(v);
+  pool_free(obj_pool, v);
 }
 
 lobj*

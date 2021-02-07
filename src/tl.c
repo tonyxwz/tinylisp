@@ -57,6 +57,8 @@ main(int argc, char** argv)
             TL);
   int return_code = 0;
 
+  lobj_pool_init();
+  lenv_pool_init();
   lenv* env = lenv_new(GLOBAL_ENV_INIT_SIZE);
   init_env(env);
 
@@ -73,7 +75,11 @@ main(int argc, char** argv)
   } else {
     return_code = repl(env);
   }
+
   lenv_del(env);
+
+  lobj_pool_del();
+  lenv_pool_del();
   mpc_cleanup(
     9, Double, Integer, Symbol, String, Comment, Sexpr, Qexpr, Expr, TL);
   return return_code;
@@ -111,7 +117,6 @@ repl(lenv* env)
 
   return 0;
 }
-
 
 void
 init_env(lenv* e)
@@ -242,7 +247,7 @@ builtin_dir(lenv* env, lobj* a)
   // lobj* ans = lobj_qexpr();
   for (int i = 0; i < env->map->max_size; ++i) {
     if (env->map->entries[i]) {
-      entry_t* e = env->map->entries[i];  
+      entry_t* e = env->map->entries[i];
       while (e) {
         printf("slot[%d]: %s\t", i, e->key);
         lobj_println(e->val);

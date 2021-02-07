@@ -1,8 +1,21 @@
 #include "lenv.h"
+#include "mpool.h"
 #include "lobj.h"
 #include "map.h"
 #include <stdlib.h>
 #include <string.h>
+
+static pool_t* env_pool = NULL;
+void
+lenv_pool_init() {
+  env_pool = pool_new(sizeof(lenv), 256);
+}
+
+void
+lenv_pool_del() {
+  if (env_pool)
+    pool_del(env_pool);
+}
 
 // local private c functions
 int
@@ -12,7 +25,7 @@ find_(lenv* env, lobj* k);
 lenv*
 lenv_new(int size)
 {
-  lenv* env = malloc(sizeof(lenv));
+  lenv* env = pool_alloc(env_pool);
   env->map = map_new(size);
   env->par = NULL;
   return env;
@@ -23,7 +36,7 @@ void
 lenv_del(lenv* env)
 {
   map_free(env->map);
-  free(env);
+  pool_free(env_pool, env);
   // no need to free parent
 }
 
@@ -31,7 +44,7 @@ lenv_del(lenv* env)
 lenv*
 lenv_copy(lenv* e)
 {
-  lenv* x = malloc(sizeof(lenv));
+  lenv* x = pool_alloc(env_pool);
   x->map = map_copy(e->map);
   x->par = e->par;
   return x;

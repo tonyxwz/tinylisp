@@ -37,6 +37,9 @@ extern "C"
   // delete
   lobj* lenv_pop(lenv* env, lobj* k);
   int lenv_remove(lenv* env, lobj* k);
+  
+  void lenv_pool_init();
+  void lenv_pool_del();
 
 #ifdef __cplusplus
 } // extern "C"
