@@ -7,9 +7,11 @@
 extern "C"
 {
 #endif
-
+#ifdef DEBUG
+#define GLOBAL_ENV_INIT_SIZE 200
+#else
 #define GLOBAL_ENV_INIT_SIZE 20000
-
+#endif
   typedef struct lenv lenv;
 
   // TODO use a hash table for symbol lookup
@@ -37,7 +39,7 @@ extern "C"
   // delete
   lobj* lenv_pop(lenv* env, lobj* k);
   int lenv_remove(lenv* env, lobj* k);
-  
+
   void lenv_pool_init();
   void lenv_pool_del();
 
