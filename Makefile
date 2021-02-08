@@ -24,9 +24,9 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 # Address Sanitizer
 ifeq ($(NOASAN), 1)
-	ASANFLAGS :=
-else	
-	ASANFLAGS := -fsanitize=address -fno-omit-frame-pointer
+	SANFLAGS :=
+else
+	SANFLAGS := -fsanitize=address,leak,undefined -fno-omit-frame-pointer
 endif
 # The -MMD and -MP flags together generate Makefiles for us!
 # These files will have .d instead of .o as the output.
@@ -40,8 +40,8 @@ ifeq ($(BUILD), RELEASE)
 	CPPFLAGS  += -g -O3
 else
 	BUILD_DIR := $(BUILD_PREFIX)/debug
-	CPPFLAGS  += -g -O0 $(ASANFLAGS) -DDEBUG -D_DEBUG
-	LDFLAGS   += -g -O0 -lm -lreadline $(ASANFLAGS)
+	CPPFLAGS  += -g -O0 $(SANFLAGS) -DDEBUG -D_DEBUG
+	LDFLAGS   += -g -O0 -lm -lreadline $(SANFLAGS)
 endif
 
 # String substitution for every C/C++ file.
