@@ -295,9 +295,6 @@ builtin_del(lenv* env, lobj* a)
 lobj*
 builtin_echo(lenv* env, lobj* a)
 {
-  // lobj_println(a);
-  // lobj_del(a);
-  // return lobj_sexpr();
   for (int i = 0; i < a->count; ++i) {
     lobj_print(a->cell[i]);
     putchar(' ');

@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
 static pool_t* obj_pool = NULL;
 void
 lobj_pool_init()
@@ -246,6 +245,21 @@ lobj_move(lobj* v)
   return x;
 }
 
+lobj*
+lobj_inc_rc(lobj* v)
+{
+  v->rc_++;
+  return v;
+}
+
+void
+lobj_dec_rc(lobj* v)
+{
+  v->rc_--;
+  if (!v->rc_)
+    lobj_del(v);
+}
+
 // pop and delete original
 lobj*
 lobj_take(lobj* expr, int i)
@@ -448,7 +462,7 @@ lobj_call(lobj* f, lobj* args, lenv* env)
     // allow variable argument number
     if (strcmp(sym->str, "&") == 0) {
       if (f->formals->count != 1) {
-        lobj_del(args); // TODO: move this checking to defining lambda
+        lobj_del(args);
         lobj_del(sym);
         return lobj_err(
           "Invalid function, '&' should be followed by one single symbol");

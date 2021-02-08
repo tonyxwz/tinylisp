@@ -24,7 +24,6 @@ extern "C"
 #endif
 
 // TODO Improve macros
-// ASSERT_OR_CLEAN ...->##__VA_ARGS__
 #define LASSERT(args, cond, emsg, ...)                                         \
   if (!(cond)) {                                                               \
     lobj* err = lobj_err(emsg, ##__VA_ARGS__);                                 \
@@ -109,6 +108,8 @@ extern "C"
   lobj* lobj_pop(lobj* sexpr, int i);
   lobj* lobj_copy(const lobj* v);
   lobj* lobj_move(lobj* v);
+  lobj* lobj_inc_rc(lobj* v);
+  void lobj_dec_rc(lobj* v);
 
   // lexing and parsing
   lobj* lobj_read_num(mpc_ast_t* ast);
