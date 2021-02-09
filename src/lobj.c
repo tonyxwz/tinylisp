@@ -343,7 +343,7 @@ lobj*
 lobj_append(lobj* dest, lobj* x)
 {
   dest->count++;
-  dest->cell = realloc(dest->cell, sizeof(lobj) * dest->count);
+  dest->cell = realloc(dest->cell, sizeof(lobj*) * dest->count);
   dest->cell[dest->count - 1] = x;
   return dest;
 }
