@@ -283,7 +283,7 @@ builtin_del(lenv* env, lobj* a)
             "<function del> can only delete symbols");
   }
   lobj* result;
-  if (lenv_remove(env, syms->cell[0])) {
+  if (lenv_remove(env, syms->cell[0]) == 0) {
     result = lobj_sexpr();
   } else {
     result = lobj_err("undefined symbol %s", syms->str);
