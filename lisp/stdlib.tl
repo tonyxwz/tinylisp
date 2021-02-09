@@ -4,12 +4,6 @@
     {def (head fargs) (\ (tail fargs) body) }))
 
 
-;; Fibonacci
-(fn {fib n} {
-  if (|| (== n 1) (== n 2))
-    {1}
-    {+ (fib (- n 1)) (fib (- n 2))}})
-
 (def {nil} {})
 (def {true} 1)
 (def {false} 0)
@@ -121,10 +115,25 @@
       {second (first pairs)}
       {unpack case (joint (list x) (tail pairs))} }})
 
+;; Fibonacci
+(fn {fib n} {
+  if (|| (== n 1) (== n 2))
+    {1}
+    {+ (fib (- n 1)) (fib (- n 2))}})
 
 (fn {fib2 n} {
   select
     { (== n 0) 0 }
     { (== n 1) 1 }
     { otherwise (+ (fib2 (- n 1)) (fib2 (- n 2))) }
+})
+
+;; tail call optimized fibonnaci
+(fn {fib3 n} { do
+  (fn {helper n2 l} {
+    if (== n n2) 
+    {l}
+    {helper (+ n2 1) (list (second l) (+ (first l) (second l)))}
+  })
+  (first (helper 0 {0 1}))
 })
