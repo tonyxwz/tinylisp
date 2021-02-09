@@ -1,3 +1,3 @@
 (load "lisp/stdlib.tl")
 
-(echo (fib 20))
+(echo (fib2 25))

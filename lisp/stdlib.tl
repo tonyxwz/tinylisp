@@ -1,6 +1,6 @@
 ;; fn shorthand of lambda
-(def {fn} 
-  (\ {fargs body} 
+(def {fn}
+  (\ {fargs body}
     {def (head fargs) (\ (tail fargs) body) }))
 
 
@@ -18,7 +18,7 @@
 ;; pack unpack
 (fn {pack f & xs}
   {f xs})
-;; 
+;;
 (fn {unpack f l}
   {eval (join (list f) l)})
 
@@ -117,7 +117,14 @@
 (fn {case x & pairs} {
   if (== nil pairs)
     {error "no matching"} {
-    if (== x (first (first pairs))) 
+    if (== x (first (first pairs)))
       {second (first pairs)}
-      {unpack case (joint (list x) (tail pairs))}}
+      {unpack case (joint (list x) (tail pairs))} }})
+
+
+(fn {fib2 n} {
+  select
+    { (== n 0) 0 }
+    { (== n 1) 1 }
+    { otherwise (+ (fib2 (- n 1)) (fib2 (- n 2))) }
 })
