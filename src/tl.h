@@ -12,7 +12,7 @@
 extern "C"
 {
 #endif
-  typedef enum
+  typedef enum tl_operator
   {
     OP_EQ,
     OP_NE,
