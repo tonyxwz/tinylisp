@@ -127,7 +127,7 @@
     { otherwise (+ (fib2 (- n 1)) (fib2 (- n 2))) }
 })
 
-;; tail call optimized fibonnaci
+;; recursion (todo tail call optimization)
 (fn {fib3 n} { do
   (= {helper}
     (\ {n2 l} {
