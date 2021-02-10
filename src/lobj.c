@@ -35,7 +35,7 @@ lobj_common_init()
   v->body = NULL;
   v->count = 0;
   v->cell = NULL;
-  v->rc_ = 1;
+  v->rc_ = 0;  // rc_ == 0 initially, increased by inc_rc later in assignment statement
   return v;
 }
 
@@ -580,21 +580,21 @@ eval_sexpr(lenv* env, lobj* v)
   }
   if (v->count == 0) // empty expression ()
     return v;
-  if (v->count == 1) {
-    return eval(env, lobj_take(v, 0));
-  }
-  // if (v->count == 1) // echo literals (5) TODO allow or not?
-  // {
-  //   lobj* x = lobj_pop(v, 0);
-  //   if (x->type == LOBJ_FUNC) {
-  //     lobj* x2 = lobj_call(x, v, env);
-  //     lobj_del(x);
-  //     return x2;
-  //   } else {
-  //     lobj_del(v);
-  //     return x;
-  //   }
+  // if (v->count == 1) {
+  //   return eval(env, lobj_take(v, 0));
   // }
+  if (v->count == 1) // echo literals (5) TODO allow or not?
+  {
+    lobj* x = lobj_pop(v, 0);
+    if (x->type == LOBJ_FUNC) {
+      lobj* x2 = lobj_call(x, v, env);
+      lobj_del(x);
+      return x2;
+    } else {
+      lobj_del(v);
+      return x;
+    }
+  }
 
   // operator/symbol is the first cell of sexpr
   lobj* f = lobj_pop(v, 0);
