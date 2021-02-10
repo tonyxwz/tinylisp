@@ -3,7 +3,6 @@
   (\ {fargs body}
     {def (head fargs) (\ (tail fargs) body) }))
 
-
 (def {nil} {})
 (def {true} 1)
 (def {false} 0)
@@ -130,10 +129,10 @@
 
 ;; tail call optimized fibonnaci
 (fn {fib3 n} { do
-  (fn {helper n2 l} {
-    if (== n n2) 
-    {l}
-    {helper (+ n2 1) (list (second l) (+ (first l) (second l)))}
-  })
+  (= {helper}
+    (\ {n2 l} {
+      if (== n n2) 
+      {l}
+      {helper (+ n2 1) (list (second l) (+ (first l) (second l)))}}))
   (first (helper 0 {0 1}))
 })
