@@ -76,7 +76,7 @@ The abstract symtax tree
 
 ## TODO
 
-- [x] hash map for symbol lookup
-- [x] pool allocation
+- [x] hash map for symbol lookup [map.c](./src/map.c)
+- [x] pool allocation [mpool.c](./src/mpool.c)
 - [ ] gc
 - [ ] wrap os function
