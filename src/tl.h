@@ -31,7 +31,6 @@ extern "C"
 
   int repl(lenv* env);
   void print_ast();
-  // lobj* builtin(lobj* v, const char* sym);
 
   void init_env(lenv* e);
 

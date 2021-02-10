@@ -216,6 +216,7 @@ builtin_var(lenv* env, lobj* a, char* operator)
   // TODO protect builtin symbols
   for (int i = 0; i < syms->count; ++i) {
     if (strcmp(operator, "=") == 0) {
+      // TODO
       lenv_create(env, syms->cell[i], a->cell[i + 1]);
     }
     if (strcmp(operator, "def") == 0) {
@@ -243,8 +244,7 @@ lobj*
 builtin_dir(lenv* env, lobj* a)
 {
 
-  LASSERT_ARGC("dir", a, 1);
-  // lobj* ans = lobj_qexpr();
+  LASSERT_ARGC("dir", a, 0);
   for (int i = 0; i < env->map->max_size; ++i) {
     if (env->map->entries[i]) {
       printf("slot[%d]:", i);
@@ -257,7 +257,6 @@ builtin_dir(lenv* env, lobj* a)
       }
       putchar('\n');
     }
-    // lobj_append(ans, env->objs[i]);
   }
   lobj_del(a);
   // TODO return a qexpr of symbols instead
@@ -365,26 +364,6 @@ builtin_lambda(lenv* env, lobj* a)
   lobj_del(a);
   return lambda;
 }
-
-// lisp way replacement in stdlib
-// lobj*
-// builtin_fn(lenv* env, lobj* a)
-// {
-//   LASSERT_ARGC("fn", a, 2);
-//   LASSERT_TYPE_I("fn", a, 0, LOBJ_QEXPR);
-//   LASSERT_TYPE_I("fn", a, 1, LOBJ_QEXPR);
-//   LASSERT(a,
-//           a->cell[0]->count > 0,
-//           "<function fn> requires at least one arg as function name");
-//   lobj* fname = lobj_append(lobj_qexpr(), lobj_pop(a->cell[0], 0));
-//   lobj* fun = builtin_lambda(env, a); // a is freed
-
-//   lobj* tmp = lobj_qexpr();
-//   lobj_append(tmp, fname);
-//   lobj_append(tmp, fun);
-
-//   return builtin_def(env, tmp);
-// }
 
 lobj*
 builtin_if(lenv* env, lobj* a)
