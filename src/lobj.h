@@ -92,6 +92,27 @@ extern "C"
     struct lobj** cell; // list of other lobj's contained in expr
   };
 
+  typedef struct lobj2
+  {
+    lobj_type type;
+    unsigned int rc_;
+    union {
+      int i; // int
+      double d; // double
+      char* str; // string, symbol, error
+      struct { // expression
+        int count;
+        struct lobj2** cell;
+      };
+      struct { // function
+        lbuiltinFunc builtin;
+        lenv* env;
+        struct lobj2* formals;
+        struct lobj2* body;
+      };
+    };
+  } lobj2;
+
   // ctor dtor
   lobj* lobj_double(double x);
   lobj* lobj_int(int x);
