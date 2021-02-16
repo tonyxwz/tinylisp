@@ -23,6 +23,7 @@ extern "C"
   // unary
   lobj* builtin_exp(lenv* e, lobj* v);
   lobj* builtin_ln(lenv* e, lobj* v);
+  lobj* builtin_sqrt(lenv* e, lobj* v);
 
   // cmp
   lobj* builtin_feq(lenv* e, lobj* v);

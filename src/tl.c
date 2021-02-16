@@ -1,4 +1,5 @@
 #define _XOPEN_SOURCE 500
+#include "lmath.h"
 #include "map.h"
 #include "mpc.h"
 #include "lenv.h"
@@ -36,7 +37,7 @@ main(int argc, char** argv)
   mpca_lang(MPCA_LANG_DEFAULT,
             " \
     integer:  /-?[0-9]+/ ;                                   \
-    double:   /\\b-?([0-9]*)?\\.[0-9]+\\b/ ;   \
+    double:   /-?([0-9]*)?\\.[0-9]?/ ;   \
     symbol:   /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&%\\^\\|]+/ ;    \
     string:   /\"(\\\\.|[^\"])*\"/ ;                       \
     comment:  /;[^\\r\\n]*/ ;                              \
@@ -173,6 +174,7 @@ init_env(lenv* e)
   lenv_add_builtin(e, "exp", builtin_exp);
   lenv_add_builtin(e, "pow", builtin_pow);
   lenv_add_builtin(e, "ln", builtin_ln);
+  lenv_add_builtin(e, "sqrt", builtin_sqrt);
 
   lenv_add_builtin(e, "eq", builtin_feq);
   lenv_add_builtin(e, "lt", builtin_flt);

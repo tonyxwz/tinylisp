@@ -193,6 +193,9 @@ builtin_ln(lenv* e, lobj* v)
 {
   return unary_op_(e, v, log, "ln");
 }
+lobj* builtin_sqrt(lenv* e, lobj* v) {
+  return unary_op_(e, v, sqrt, "sqrt");
+}
 
 // cmp
 lobj*

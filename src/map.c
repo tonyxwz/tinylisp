@@ -115,7 +115,7 @@ map_insert(map_t* map, char* key, lobj* val)
     entry = entry->next;
   }
   // hash collision but not exist
-  // c is NULL, p is the last of the linked list
+  // entry is NULL, p is the last of the linked list
   parent->next = entry_new(key, val);
 }
 
