@@ -1,4 +1,4 @@
-# tl, Tony's Lispformatting
+# tl, Tony's Lisp
 
 A simple lisp implementation ([Build you own Lisp](http://www.buildyourownlisp.com))
 ## Try it
